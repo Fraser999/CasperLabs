@@ -91,7 +91,7 @@ steps:
   commands:
   - "cd execution-engine/"
   - "make setup"
-  - "make test test-contracts"
+  - "make test"
   image: "casperlabs/buildenv:latest"
   when:
     event:

@@ -11,7 +11,6 @@ use crate::test::{DEFAULT_ACCOUNT_ADDR, DEFAULT_GENESIS_CONFIG};
 const ACCOUNT_1_ADDR: [u8; 32] = [1u8; 32];
 const ACCOUNT_1_INITIAL_BALANCE: u64 = MAX_PAYMENT * 2;
 
-#[ignore]
 #[test]
 fn should_manage_associated_key() {
     // for a given account, should be able to add a new associated key and update

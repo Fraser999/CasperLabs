@@ -7,7 +7,6 @@ use engine_shared::transform::Transform;
 use crate::support::test_support::{DeployBuilder, ExecRequestBuilder, InMemoryWasmTestBuilder};
 use crate::test::{DEFAULT_ACCOUNT_ADDR, DEFAULT_GENESIS_CONFIG};
 
-#[ignore]
 #[test]
 fn should_run_ee_601_pay_session_new_uref_collision() {
     let genesis_public_key = PublicKey::new(DEFAULT_ACCOUNT_ADDR);

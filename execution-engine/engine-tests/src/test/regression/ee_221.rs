@@ -1,7 +1,6 @@
 use crate::support::test_support::{InMemoryWasmTestBuilder, DEFAULT_BLOCK_TIME};
 use crate::test::{DEFAULT_ACCOUNT_ADDR, DEFAULT_GENESIS_CONFIG};
 
-#[ignore]
 #[test]
 fn should_run_ee_221_get_uref_regression_test() {
     // This test runs a contract that's after every call extends the same key with

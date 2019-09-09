@@ -4,6 +4,11 @@ version = "0.1.0"
 authors = ["Henry Till <henrytill@gmail.com>"]
 edition = "2018"
 
+[lib]
+bench = false
+doctest = false
+test = false
+
 [features]
 default = []
 std = ["contract-ffi/std"]

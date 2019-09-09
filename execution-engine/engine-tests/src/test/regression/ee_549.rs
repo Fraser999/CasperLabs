@@ -1,7 +1,6 @@
 use crate::support::test_support::{InMemoryWasmTestBuilder, DEFAULT_BLOCK_TIME};
 use crate::test::{DEFAULT_ACCOUNT_ADDR, DEFAULT_GENESIS_CONFIG};
 
-#[ignore]
 #[test]
 fn should_run_ee_549_set_refund_regression() {
     let mut builder = InMemoryWasmTestBuilder::default();

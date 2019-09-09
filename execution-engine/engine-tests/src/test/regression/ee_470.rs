@@ -3,7 +3,6 @@ use engine_storage::global_state::in_memory::InMemoryGlobalState;
 use crate::support::test_support::{InMemoryWasmTestBuilder, DEFAULT_BLOCK_TIME};
 use crate::test::{DEFAULT_ACCOUNT_ADDR, DEFAULT_GENESIS_CONFIG};
 
-#[ignore]
 #[test]
 fn regression_test_genesis_hash_mismatch() {
     let mut builder_base = InMemoryWasmTestBuilder::default();

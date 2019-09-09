@@ -6,7 +6,6 @@ use engine_shared::transform::Transform;
 use crate::support::test_support::{InMemoryWasmTestBuilder, DEFAULT_BLOCK_TIME};
 use crate::test::{DEFAULT_ACCOUNT_ADDR, DEFAULT_GENESIS_CONFIG};
 
-#[ignore]
 #[test]
 fn should_run_local_state_contract() {
     // This test runs a contract that's after every call extends the same key with

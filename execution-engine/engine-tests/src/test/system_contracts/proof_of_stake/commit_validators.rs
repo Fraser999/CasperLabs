@@ -17,7 +17,6 @@ const ACCOUNT_2_ADDR: [u8; 32] = [2u8; 32];
 const ACCOUNT_2_BALANCE: u64 = 2000;
 const ACCOUNT_2_BOND: u64 = 200;
 
-#[ignore]
 #[test]
 fn should_return_bonded_validators() {
     let accounts = {

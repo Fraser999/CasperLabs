@@ -5,7 +5,6 @@ use engine_core::engine_state::EngineConfig;
 use crate::support::test_support::{DeployBuilder, ExecRequestBuilder, InMemoryWasmTestBuilder};
 use crate::test::{DEFAULT_ACCOUNT_ADDR, DEFAULT_GENESIS_CONFIG};
 
-#[ignore]
 #[test]
 fn should_run_get_phase_contract() {
     let default_account = PublicKey::new(DEFAULT_ACCOUNT_ADDR);

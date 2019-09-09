@@ -11,7 +11,6 @@ use crate::test::{DEFAULT_ACCOUNT_ADDR, DEFAULT_GENESIS_CONFIG};
 const ACCOUNT_1_ADDR: [u8; 32] = [1u8; 32];
 const ACCOUNT_1_INITIAL_BALANCE: u64 = MAX_PAYMENT;
 
-#[ignore]
 #[test]
 fn should_run_main_purse_contract_default_account() {
     let mut builder = InMemoryWasmTestBuilder::default();
@@ -40,7 +39,6 @@ fn should_run_main_purse_contract_default_account() {
         .commit();
 }
 
-#[ignore]
 #[test]
 fn should_run_main_purse_contract_account_1() {
     let account_key = Key::Account(ACCOUNT_1_ADDR);

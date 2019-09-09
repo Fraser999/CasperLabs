@@ -48,7 +48,6 @@ fn do_pass(pass: &str) -> (URef, URef) {
     (get_uref(keys["uref1"]), get_uref(keys["uref2"]))
 }
 
-#[ignore]
 #[test]
 fn should_properly_pass_rng_state_to_subcontracts() {
     // the baseline pass, no subcalls

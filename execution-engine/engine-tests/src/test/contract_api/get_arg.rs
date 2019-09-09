@@ -55,14 +55,12 @@ fn call_get_arg(args: impl ArgsParser) -> Result<(), String> {
     Err(error_message)
 }
 
-#[ignore]
 #[test]
 fn should_use_passed_argument() {
     call_get_arg((String::from(ARG0_VALUE), U512::from(ARG1_VALUE)))
         .expect("Should successfuly call get_arg with 2 valid args");
 }
 
-#[ignore]
 #[test]
 fn should_revert_with_missing_arg() {
     assert_eq!(
@@ -81,7 +79,6 @@ fn should_revert_with_missing_arg() {
     );
 }
 
-#[ignore]
 #[test]
 fn should_revert_with_invalid_argument() {
     assert_eq!(

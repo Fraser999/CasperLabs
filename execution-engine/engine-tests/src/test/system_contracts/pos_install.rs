@@ -26,7 +26,6 @@ const POS_BONDING_PURSE: &str = "pos_bonding_purse";
 const POS_PAYMENT_PURSE: &str = "pos_payment_purse";
 const POS_REWARDS_PURSE: &str = "pos_rewards_purse";
 
-#[ignore]
 #[test]
 fn should_run_pos_install_contract() {
     let mut builder = WasmTestBuilder::default();

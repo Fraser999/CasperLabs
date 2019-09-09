@@ -7,6 +7,7 @@ edition = "2018"
 [dependencies]
 clap = "2"
 contract-ffi = { path = "../contract-ffi", package = "casperlabs-contract-ffi" }
+contracts = { path = "../contracts", package = "casperlabs-contracts" }
 engine-core = { path = "../engine-core", package = "casperlabs-engine-core" }
 engine-grpc-server = { path = "../engine-grpc-server", package = "casperlabs-engine-grpc-server" }
 engine-shared = { path = "../engine-shared", package = "casperlabs-engine-shared" }

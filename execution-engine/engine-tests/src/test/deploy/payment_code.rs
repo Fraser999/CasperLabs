@@ -17,7 +17,6 @@ const ACCOUNT_1_ADDR: [u8; 32] = [42u8; 32];
 const STANDARD_PAYMENT_WASM: &str = "standard_payment.wasm";
 const DO_NOTHING_WASM: &str = "do_nothing.wasm";
 
-#[ignore]
 #[test]
 fn should_raise_insufficient_payment_when_caller_lacks_minimum_balance() {
     let account_1_public_key = PublicKey::new(ACCOUNT_1_ADDR);
@@ -91,7 +90,6 @@ fn should_raise_insufficient_payment_when_caller_lacks_minimum_balance() {
     );
 }
 
-#[ignore]
 #[test]
 fn should_raise_insufficient_payment_when_payment_code_does_not_pay_enough() {
     let account_1_public_key = PublicKey::new(ACCOUNT_1_ADDR);
@@ -175,7 +173,6 @@ fn should_raise_insufficient_payment_when_payment_code_does_not_pay_enough() {
     );
 }
 
-#[ignore]
 #[test]
 fn should_raise_insufficient_payment_when_payment_code_fails() {
     let account_1_public_key = PublicKey::new(ACCOUNT_1_ADDR);
@@ -265,7 +262,6 @@ fn should_raise_insufficient_payment_when_payment_code_fails() {
     );
 }
 
-#[ignore]
 #[test]
 fn should_run_out_of_gas_when_session_code_exceeds_gas_limit() {
     let account_1_public_key = PublicKey::new(ACCOUNT_1_ADDR);
@@ -309,7 +305,6 @@ fn should_run_out_of_gas_when_session_code_exceeds_gas_limit() {
     assert_eq!(error_message, "GasLimit", "expected gas limit");
 }
 
-#[ignore]
 #[test]
 fn should_correctly_charge_when_session_code_runs_out_of_gas() {
     let payment_purse_amount = 10_000_000;
@@ -371,7 +366,6 @@ fn should_correctly_charge_when_session_code_runs_out_of_gas() {
     assert_eq!(error_message, "GasLimit", "expected gas limit");
 }
 
-#[ignore]
 #[test]
 fn should_correctly_charge_when_session_code_fails() {
     let account_1_public_key = PublicKey::new(ACCOUNT_1_ADDR);
@@ -433,7 +427,6 @@ fn should_correctly_charge_when_session_code_fails() {
     );
 }
 
-#[ignore]
 #[test]
 fn should_correctly_charge_when_session_code_succeeds() {
     let account_1_public_key = PublicKey::new(ACCOUNT_1_ADDR);
@@ -519,7 +512,6 @@ fn get_pos_rewards_purse_balance(builder: &InMemoryWasmTestBuilder) -> U512 {
     builder.get_purse_balance(purse_id)
 }
 
-#[ignore]
 #[test]
 fn should_finalize_to_rewards_purse() {
     let account_1_public_key = PublicKey::new(ACCOUNT_1_ADDR);
@@ -559,7 +551,6 @@ fn should_finalize_to_rewards_purse() {
     assert!(!rewards_purse_balance.is_zero());
 }
 
-#[ignore]
 #[test]
 fn independent_standard_payments_should_not_write_the_same_keys() {
     let account_1_public_key = PublicKey::new(ACCOUNT_1_ADDR);
@@ -642,7 +633,6 @@ fn independent_standard_payments_should_not_write_the_same_keys() {
     assert_eq!(common_write_keys.count(), 0);
 }
 
-#[ignore]
 #[test]
 fn should_charge_non_main_purse() {
     // as account_1, create & fund a new purse and use that to pay for something

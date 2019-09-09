@@ -4,88 +4,65 @@ RUSTUP = $(or $(shell which rustup), $(HOME)/.cargo/bin/rustup)
 
 RUST_TOOLCHAIN := $(shell cat rust-toolchain)
 
-# Directory names should match crate names
-BENCH_CONTRACTS     = $(shell find ./contracts/bench     -mindepth 1 -maxdepth 1 -exec basename {} \;)
-CLIENT_CONTRACTS    = $(shell find ./contracts/client    -mindepth 1 -maxdepth 1 -exec basename {} \;)
-EXPLORER_CONTRACTS  = $(shell find ./contracts/explorer  -mindepth 1 -maxdepth 1 -exec basename {} \;)
-PROFILING_CONTRACTS = $(shell find ./contracts/profiling -mindepth 1 -maxdepth 1 -exec basename {} \;)
-SRE_CONTRACTS       = $(shell find ./contracts/SRE       -mindepth 1 -maxdepth 1 -exec basename {} \;)
-SYSTEM_CONTRACTS    = $(shell find ./contracts/system    -mindepth 1 -maxdepth 1 -exec basename {} \;)
-TEST_CONTRACTS      = $(shell find ./contracts/test      -mindepth 1 -maxdepth 1 -exec basename {} \;)
-
-BENCH_CONTRACTS     := $(patsubst %, build-contract/%, $(BENCH_CONTRACTS))
-CLIENT_CONTRACTS    := $(patsubst %, build-contract/%, $(CLIENT_CONTRACTS))
-EXPLORER_CONTRACTS  := $(patsubst %, build-contract/%, $(EXPLORER_CONTRACTS))
-PROFILING_CONTRACTS := $(patsubst %, build-contract/%, $(PROFILING_CONTRACTS))
-SRE_CONTRACTS       := $(patsubst %, build-contract/%, $(SRE_CONTRACTS))
-SYSTEM_CONTRACTS    := $(patsubst %, build-contract/%, $(SYSTEM_CONTRACTS))
-TEST_CONTRACTS      := $(patsubst %, build-contract/%, $(TEST_CONTRACTS))
-
+SYSTEM_CONTRACTS          = build-contracts/system
+CONTRACTS_MANIFEST_ARG    = --manifest-path=contracts/Cargo.toml
 CONTRACT_TARGET_DIR       = target/wasm32-unknown-unknown/release
 PACKAGED_SYSTEM_CONTRACTS = mint_token.wasm pos.wasm
 
 .PHONY: all
-all: build build-contracts
+all: build
 
 .PHONY: build
 build: $(SYSTEM_CONTRACTS)
 	$(CARGO) build $(CARGO_FLAGS)
 
 build-contract/%:
-	$(CARGO) build $(filter-out --release, $(CARGO_FLAGS)) -p $* --release --target wasm32-unknown-unknown
+	$(CARGO) build $(filter-out --release, $(CARGO_FLAGS)) -p $* --release $(CONTRACTS_MANIFEST_ARG) --target-dir=target
 
-.PHONY: build-contracts
-build-contracts: \
-	$(BENCH_CONTRACTS) \
-	$(CLIENT_CONTRACTS) \
-	$(EXPLORER_CONTRACTS) \
-	$(PROFILING_CONTRACTS) \
-	$(SRE_CONTRACTS) \
-	$(SYSTEM_CONTRACTS) \
-	$(TEST_CONTRACTS)
+build-contracts/%:
+	$(CARGO) build $(filter-out --release, $(CARGO_FLAGS)) --no-default-features --features=$* --release $(CONTRACTS_MANIFEST_ARG) --target-dir=target
 
 .PHONY: test
-test: $(SYSTEM_CONTRACTS)
-	$(CARGO) test $(CARGO_FLAGS) -- --nocapture
-
-.PHONY: test-contracts
-test-contracts: build-contracts
-	$(CARGO) test $(CARGO_FLAGS) -p casperlabs-engine-tests -- --ignored --nocapture
+test:
+	RUST_BACKTRACE=1 $(CARGO) test $(CARGO_FLAGS) -- --nocapture
 
 .PHONY: check-format
 check-format:
 	$(CARGO) fmt --all -- --check
+	$(CARGO) fmt --all $(CONTRACTS_MANIFEST_ARG) -- --check
 
 .PHONY: format
 format:
 	$(CARGO) fmt --all
+	$(CARGO) fmt --all $(CONTRACTS_MANIFEST_ARG)
 
 .PHONY: lint
 lint:
 	$(CARGO) clippy --all-targets --all -- -D warnings -A renamed_and_removed_lints
+	$(CARGO) clippy --all-targets --all --exclude casperlabs-contracts $(CONTRACTS_MANIFEST_ARG) -- -D warnings -A renamed_and_removed_lints
 
 .PHONY: check
 check: \
 	check-format \
 	build \
 	lint \
-	test \
-	test-contracts
+	test
 
 .PHONY: clean
 clean:
 	rm -f comm/.rpm
 	$(CARGO) clean
+	$(CARGO) clean $(CONTRACTS_MANIFEST_ARG)
 
 .PHONY: deb
-deb: $(SYSTEM_CONTRACTS)
+deb:
 	cd engine-grpc-server && $(CARGO) deb
 
 engine-grpc-server/.rpm:
 	cd engine-grpc-server && $(CARGO) rpm init
 
 .PHONY: rpm
-rpm: engine-grpc-server/.rpm $(SYSTEM_CONTRACTS)
+rpm: engine-grpc-server/.rpm
 	cd engine-grpc-server && $(CARGO) rpm build
 
 target/system-contracts.tar.gz: $(SYSTEM_CONTRACTS)
@@ -107,7 +84,7 @@ check-publish:
 	cd contract-ffi && $(CARGO) publish --dry-run
 
 .PHONY: bench
-bench: build-contracts
+bench:
 	$(CARGO) bench
 
 .PHONY: setup-cargo-packagers

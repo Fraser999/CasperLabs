@@ -7,7 +7,6 @@ use crate::support::test_support::{
 };
 use crate::test::{DEFAULT_ACCOUNT_ADDR, DEFAULT_GENESIS_CONFIG};
 
-#[ignore]
 #[test]
 fn should_run_ee_539_serialize_action_thresholds_regression() {
     // This test runs a contract that's after every call extends the same key with

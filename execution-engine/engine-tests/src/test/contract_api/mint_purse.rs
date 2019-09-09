@@ -8,7 +8,6 @@ use crate::test::{DEFAULT_ACCOUNT_ADDR, DEFAULT_GENESIS_CONFIG};
 
 const SYSTEM_ADDR: [u8; 32] = [0u8; 32];
 
-#[ignore]
 #[test]
 fn should_run_mint_purse_contract() {
     WasmTestBuilder::default()
@@ -34,7 +33,6 @@ fn should_run_mint_purse_contract() {
         .expect_success();
 }
 
-#[ignore]
 #[test]
 fn should_not_allow_non_system_accounts_to_mint() {
     assert!(WasmTestBuilder::default()

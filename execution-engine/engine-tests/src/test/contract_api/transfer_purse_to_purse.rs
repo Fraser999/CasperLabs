@@ -10,7 +10,6 @@ use crate::test::{DEFAULT_ACCOUNT_ADDR, DEFAULT_GENESIS_CONFIG};
 
 const PURSE_TO_PURSE_AMOUNT: u64 = 42;
 
-#[ignore]
 #[test]
 fn should_run_purse_to_purse_transfer() {
     let source = "purse:main".to_string();
@@ -104,7 +103,6 @@ fn should_run_purse_to_purse_transfer() {
     );
 }
 
-#[ignore]
 #[test]
 fn should_run_purse_to_purse_transfer_with_error() {
     // This test runs a contract that's after every call extends the same key with

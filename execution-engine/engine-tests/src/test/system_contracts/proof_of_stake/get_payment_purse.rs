@@ -9,7 +9,6 @@ use crate::test::{DEFAULT_ACCOUNT_ADDR, DEFAULT_GENESIS_CONFIG, DEFAULT_PAYMENT}
 const ACCOUNT_1_ADDR: [u8; 32] = [1u8; 32];
 const ACCOUNT_1_INITIAL_BALANCE: u64 = 100_000_000 + 100;
 
-#[ignore]
 #[test]
 fn should_run_get_payment_purse_contract_default_account() {
     InMemoryWasmTestBuilder::default()
@@ -28,7 +27,6 @@ fn should_run_get_payment_purse_contract_default_account() {
         .commit();
 }
 
-#[ignore]
 #[test]
 fn should_run_get_payment_purse_contract_account_1() {
     InMemoryWasmTestBuilder::default()

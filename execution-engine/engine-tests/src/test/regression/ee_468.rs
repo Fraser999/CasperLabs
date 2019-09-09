@@ -6,7 +6,6 @@ use crate::support::test_support::{
 };
 use crate::test::{DEFAULT_ACCOUNT_ADDR, DEFAULT_GENESIS_CONFIG};
 
-#[ignore]
 #[test]
 fn should_not_fail_deserializing() {
     let is_error = InMemoryWasmTestBuilder::default()

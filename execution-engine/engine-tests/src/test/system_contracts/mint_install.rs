@@ -9,7 +9,6 @@ use crate::test::{DEFAULT_ACCOUNT_ADDR, DEFAULT_GENESIS_CONFIG};
 
 const DEPLOY_HASH_1: [u8; 32] = [1u8; 32];
 
-#[ignore]
 #[test]
 fn should_run_mint_install_contract() {
     let mut builder = WasmTestBuilder::default();

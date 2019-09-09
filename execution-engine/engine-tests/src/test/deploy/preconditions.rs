@@ -7,7 +7,6 @@ use crate::test::{DEFAULT_ACCOUNT_ADDR, DEFAULT_GENESIS_CONFIG};
 
 const ACCOUNT_1_ADDR: [u8; 32] = [42u8; 32];
 
-#[ignore]
 #[test]
 fn should_raise_precondition_authorization_failure_invalid_account() {
     let account_1_public_key = PublicKey::new(ACCOUNT_1_ADDR);
@@ -52,7 +51,6 @@ fn should_raise_precondition_authorization_failure_invalid_account() {
     );
 }
 
-#[ignore]
 #[test]
 fn should_raise_precondition_authorization_failure_empty_authorized_keys() {
     let engine_config = EngineConfig::new().set_use_payment_code(true);
@@ -87,7 +85,6 @@ fn should_raise_precondition_authorization_failure_empty_authorized_keys() {
     );
 }
 
-#[ignore]
 #[test]
 fn should_raise_precondition_authorization_failure_invalid_authorized_keys() {
     let account_1_public_key = PublicKey::new(ACCOUNT_1_ADDR);

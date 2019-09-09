@@ -7,7 +7,6 @@ use crate::support::test_support::{
 };
 use crate::test::{DEFAULT_ACCOUNT_ADDR, DEFAULT_GENESIS_CONFIG};
 
-#[ignore]
 #[test]
 fn should_run_ee_460_no_side_effects_on_error_regression() {
     let result = InMemoryWasmTestBuilder::default()

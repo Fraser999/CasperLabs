@@ -23,7 +23,6 @@ const ACCOUNT_2_BONDED_AMOUNT: u64 = 2_000_000;
 const ACCOUNT_1_BALANCE: u64 = 1_000_000_000;
 const ACCOUNT_2_BALANCE: u64 = 2_000_000_000;
 
-#[ignore]
 #[test]
 fn should_run_genesis_with_chainspec() {
     let account_1_balance = Motes::new(ACCOUNT_1_BALANCE.into());
@@ -108,7 +107,6 @@ fn should_run_genesis_with_chainspec() {
     }
 }
 
-#[ignore]
 #[should_panic]
 #[test]
 fn should_fail_if_bad_mint_install_contract_is_provided() {
@@ -158,7 +156,6 @@ fn should_fail_if_bad_mint_install_contract_is_provided() {
     builder.run_genesis(&genesis_config);
 }
 
-#[ignore]
 #[should_panic]
 #[test]
 fn should_fail_if_bad_pos_install_contract_is_provided() {

@@ -7,7 +7,6 @@ use crate::test::{DEFAULT_ACCOUNT_ADDR, DEFAULT_GENESIS_CONFIG};
 
 const EXPECTED_UREF_VALUE: u64 = 123_456_789u64;
 
-#[ignore]
 #[test]
 fn should_run_known_urefs_contract() {
     let result = InMemoryWasmTestBuilder::default()

@@ -51,7 +51,6 @@ fn get_pos_bonding_purse_balance(builder: &InMemoryWasmTestBuilder) -> U512 {
     builder.get_purse_balance(purse_id)
 }
 
-#[ignore]
 #[test]
 fn should_run_successful_bond_and_unbond() {
     let accounts = {
@@ -457,7 +456,6 @@ fn should_run_successful_bond_and_unbond() {
     );
 }
 
-#[ignore]
 #[test]
 fn should_fail_bonding_with_insufficient_funds() {
     let accounts = {
@@ -519,7 +517,6 @@ fn should_fail_bonding_with_insufficient_funds() {
     assert_eq!(error_message, "Exit code: 7");
 }
 
-#[ignore]
 #[test]
 fn should_fail_unbonding_validator_without_bonding_first() {
     let accounts = {

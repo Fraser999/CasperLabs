@@ -4,7 +4,6 @@ use engine_core::engine_state::MAX_PAYMENT;
 use crate::support::test_support::{InMemoryWasmTestBuilder, STANDARD_PAYMENT_CONTRACT};
 use crate::test::{DEFAULT_ACCOUNT_ADDR, DEFAULT_GENESIS_CONFIG};
 
-#[ignore]
 #[test]
 fn should_run_get_blocktime_contract() {
     let block_time: u64 = 42;

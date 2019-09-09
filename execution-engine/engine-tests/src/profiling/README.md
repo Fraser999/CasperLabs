@@ -12,9 +12,7 @@ To profile `simple-transfer` using `perf` and open the flamegraph in Firefox, fo
 * Clone and add [Flamegraph](https://github.com/brendangregg/FlameGraph) to your path
 * Run:
     ```bash
-    cd CasperLabs/execution-engine/
-    make build-contracts
-    cd engine-tests/
+    cd CasperLabs/execution-engine/engine-tests/
     cargo build --release --bin state-initializer
     cargo build --release --bin simple-transfer
     ../target/release/state-initializer --data-dir=../target | perf record -g --call-graph dwarf ../target/release/simple-transfer --data-dir=../target

@@ -52,7 +52,6 @@ fn initialize() -> InMemoryWasmTestBuilder {
     builder
 }
 
-#[ignore]
 #[test]
 fn finalize_payment_should_not_be_run_by_non_system_accounts() {
     let mut builder = initialize();
@@ -90,7 +89,6 @@ fn finalize_payment_should_not_be_run_by_non_system_accounts() {
         .is_error());
 }
 
-#[ignore]
 #[test]
 fn finalize_payment_should_refund_to_specified_purse() {
     let engine_config = EngineConfig::new().set_use_payment_code(true);

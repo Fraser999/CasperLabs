@@ -20,9 +20,7 @@ check_for_perf() {
 }
 
 run_perf() {
-    cd $EE_DIR
-    make build-contracts
-    cd engine-tests/
+    cd ${EE_DIR}/engine-tests/
     cargo build --release --bin state-initializer
     cargo build --release --bin simple-transfer
     TARGET_DIR="${EE_DIR}/target/release"

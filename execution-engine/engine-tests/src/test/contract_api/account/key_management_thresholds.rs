@@ -7,7 +7,6 @@ use crate::support::test_support::{
 };
 use crate::test::{DEFAULT_ACCOUNT_ADDR, DEFAULT_GENESIS_CONFIG};
 
-#[ignore]
 #[test]
 fn should_verify_key_management_permission_with_low_weight() {
     InMemoryWasmTestBuilder::default()
@@ -37,7 +36,6 @@ fn should_verify_key_management_permission_with_low_weight() {
         .commit();
 }
 
-#[ignore]
 #[test]
 fn should_verify_key_management_permission_with_sufficient_weight() {
     InMemoryWasmTestBuilder::default()
