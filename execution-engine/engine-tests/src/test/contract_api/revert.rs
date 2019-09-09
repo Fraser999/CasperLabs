@@ -6,7 +6,6 @@ const GENESIS_ADDR: [u8; 32] = [7u8; 32];
 const REVERT_WASM: &str = "revert.wasm";
 const BLOCK_TIME: u64 = 42;
 
-#[ignore]
 #[test]
 fn should_revert() {
     WasmTestBuilder::default()

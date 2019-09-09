@@ -10,7 +10,6 @@ use engine_core::engine_state::{EngineConfig, MAX_PAYMENT};
 
 const GENESIS_ADDR: [u8; 32] = [6u8; 32];
 
-#[ignore]
 #[test]
 fn should_run_ee_601_pay_session_new_uref_collision() {
     let genesis_public_key = PublicKey::new(GENESIS_ADDR);

@@ -62,7 +62,6 @@ impl TestContext {
     }
 }
 
-#[ignore]
 #[test]
 fn should_transfer_to_account() {
     let initial_genesis_amount: U512 = U512::from(INITIAL_GENESIS_AMOUNT);
@@ -162,7 +161,6 @@ fn should_transfer_to_account() {
     );
 }
 
-#[ignore]
 #[test]
 fn should_transfer_from_account_to_account() {
     let initial_genesis_amount: U512 = U512::from(INITIAL_GENESIS_AMOUNT);
@@ -313,7 +311,6 @@ fn should_transfer_from_account_to_account() {
     );
 }
 
-#[ignore]
 #[test]
 fn should_transfer_to_existing_account() {
     let initial_genesis_amount: U512 = U512::from(INITIAL_GENESIS_AMOUNT);
@@ -477,7 +474,6 @@ fn should_transfer_to_existing_account() {
     );
 }
 
-#[ignore]
 #[test]
 fn should_fail_when_insufficient_funds() {
     let global_state = InMemoryGlobalState::empty().unwrap();
@@ -594,7 +590,6 @@ fn should_fail_when_insufficient_funds() {
     )
 }
 
-#[ignore]
 #[test]
 fn should_transfer_total_amount() {
     let mut builder = test_support::WasmTestBuilder::default();

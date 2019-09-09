@@ -44,7 +44,6 @@ const TEST_BOND_FROM_MAIN_PURSE: &str = "bond-from-main-purse";
 const TEST_SEED_NEW_ACCOUNT: &str = "seed_new_account";
 const TEST_UNBOND: &str = "unbond";
 
-#[ignore]
 #[test]
 fn should_run_successful_bond_and_unbond() {
     let genesis_account_key = Key::Account(GENESIS_ADDR);
@@ -365,7 +364,6 @@ fn should_run_successful_bond_and_unbond() {
     );
 }
 
-#[ignore]
 #[test]
 fn should_fail_bonding_with_insufficient_funds() {
     let genesis_validators = {
@@ -418,7 +416,6 @@ fn should_fail_bonding_with_insufficient_funds() {
     assert_eq!(error_message, "Exit code: 7");
 }
 
-#[ignore]
 #[test]
 fn should_fail_unbonding_validator_without_bonding_first() {
     let genesis_validators = {

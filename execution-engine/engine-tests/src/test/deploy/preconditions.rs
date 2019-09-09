@@ -10,7 +10,6 @@ use engine_grpc_server::engine_server::ipc::{DeployResult, ExecResponse_oneof_re
 const GENESIS_ADDR: [u8; 32] = [12; 32];
 const ACCOUNT_1_ADDR: [u8; 32] = [42u8; 32];
 
-#[ignore]
 #[test]
 fn should_raise_precondition_invalid_nonce() {
     let genesis_public_key = PublicKey::new(GENESIS_ADDR);
@@ -70,7 +69,6 @@ fn should_raise_precondition_invalid_nonce() {
     );
 }
 
-#[ignore]
 #[test]
 fn should_raise_precondition_authorization_failure_invalid_account() {
     let genesis_addr = GENESIS_ADDR;
@@ -116,7 +114,6 @@ fn should_raise_precondition_authorization_failure_invalid_account() {
     );
 }
 
-#[ignore]
 #[test]
 fn should_raise_precondition_authorization_failure_empty_authorized_keys() {
     let genesis_addr = GENESIS_ADDR;
@@ -153,7 +150,6 @@ fn should_raise_precondition_authorization_failure_empty_authorized_keys() {
     );
 }
 
-#[ignore]
 #[test]
 fn should_raise_precondition_authorization_failure_invalid_authorized_keys() {
     let genesis_addr = GENESIS_ADDR;

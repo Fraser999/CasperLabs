@@ -6,7 +6,6 @@ use contract_ffi::value::account::PublicKey;
 const GENESIS_ADDR: [u8; 32] = [7u8; 32];
 const ACCOUNT_1_ADDR: [u8; 32] = [1u8; 32];
 
-#[ignore]
 #[test]
 fn should_run_get_caller_contract() {
     WasmTestBuilder::default()
@@ -43,7 +42,6 @@ fn should_run_get_caller_contract() {
         .expect_success();
 }
 
-#[ignore]
 #[test]
 fn should_run_get_caller_subcall_contract() {
     WasmTestBuilder::default()

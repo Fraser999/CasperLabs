@@ -10,7 +10,6 @@ use crate::support::test_support::{WasmTestBuilder, DEFAULT_BLOCK_TIME};
 const GENESIS_ADDR: [u8; 32] = [12; 32];
 const ACCOUNT_1_ADDR: [u8; 32] = [42u8; 32];
 
-#[ignore]
 #[test]
 fn should_run_purse_to_account_transfer() {
     let account_1_public_key = PublicKey::new(ACCOUNT_1_ADDR);
@@ -202,7 +201,6 @@ fn should_run_purse_to_account_transfer() {
     assert_eq!(updated_balance, &Transform::AddUInt512(U512::from(1)));
 }
 
-#[ignore]
 #[test]
 fn should_fail_when_sending_too_much_from_purse_to_account() {
     let account_1_key = PublicKey::new(ACCOUNT_1_ADDR);

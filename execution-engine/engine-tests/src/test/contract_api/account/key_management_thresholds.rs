@@ -6,7 +6,6 @@ use crate::support::test_support::{WasmTestBuilder, DEFAULT_BLOCK_TIME};
 
 const GENESIS_ADDR: [u8; 32] = [6u8; 32];
 
-#[ignore]
 #[test]
 fn should_verify_key_management_permission_with_low_weight() {
     WasmTestBuilder::default()
@@ -32,7 +31,6 @@ fn should_verify_key_management_permission_with_low_weight() {
         .commit();
 }
 
-#[ignore]
 #[test]
 fn should_verify_key_management_permission_with_sufficient_weight() {
     WasmTestBuilder::default()

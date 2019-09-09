@@ -17,7 +17,6 @@ const CONTRACT_TRANSFER: &str = "transfer_purse_to_account.wasm";
 const CONTRACT_CREATE: &str = "ee_572_regression_create.wasm";
 const CONTRACT_ESCALATE: &str = "ee_572_regression_escalate.wasm";
 
-#[ignore]
 #[test]
 fn should_run_ee_572_regression() {
     let account_amount = U512::from(INITIAL_AMOUNT);

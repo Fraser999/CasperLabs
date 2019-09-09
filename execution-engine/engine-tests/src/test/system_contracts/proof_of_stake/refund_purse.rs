@@ -8,14 +8,12 @@ use engine_core::engine_state::{EngineConfig, MAX_PAYMENT};
 const GENESIS_ADDR: [u8; 32] = [6u8; 32];
 const ACCOUNT_1_ADDR: [u8; 32] = [1u8; 32];
 
-#[ignore]
 #[test]
 fn should_run_pos_refund_purse_contract_genesis_account() {
     let mut builder = initialize();
     refund_tests(&mut builder, GENESIS_ADDR);
 }
 
-#[ignore]
 #[test]
 fn should_run_pos_refund_purse_contract_account_1() {
     let mut builder = initialize();

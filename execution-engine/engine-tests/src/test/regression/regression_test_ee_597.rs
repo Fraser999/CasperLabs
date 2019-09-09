@@ -19,7 +19,6 @@ const GENESIS_ADDR: [u8; 32] = [6u8; 32];
 
 const GENESIS_VALIDATOR_BOND: u64 = 50_000;
 
-#[ignore]
 #[test]
 fn should_fail_when_bonding_amount_is_zero_ee_597_regression() {
     let genesis_validators = {

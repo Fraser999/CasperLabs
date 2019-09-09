@@ -7,7 +7,6 @@ use engine_core::execution;
 
 const GENESIS_ADDR: [u8; 32] = [7u8; 32];
 
-#[ignore]
 #[test]
 fn should_deploy_with_authorized_identity_key() {
     // Basic deploy with single key
@@ -25,7 +24,6 @@ fn should_deploy_with_authorized_identity_key() {
         .expect_success();
 }
 
-#[ignore]
 #[test]
 fn should_raise_auth_failure_with_invalid_key() {
     // tests that authorized keys that does not belong to account raises
@@ -64,7 +62,6 @@ fn should_raise_auth_failure_with_invalid_key() {
     )
 }
 
-#[ignore]
 #[test]
 fn should_raise_auth_failure_with_invalid_keys() {
     // tests that authorized keys that does not belong to account raises
@@ -111,7 +108,6 @@ fn should_raise_auth_failure_with_invalid_keys() {
     )
 }
 
-#[ignore]
 #[test]
 fn should_raise_deploy_authorization_failure() {
     // tests that authorized keys needs sufficient cumulative weight
@@ -277,7 +273,6 @@ fn should_raise_deploy_authorization_failure() {
         .finish();
 }
 
-#[ignore]
 #[test]
 fn should_authorize_deploy_with_multiple_keys() {
     // tests that authorized keys needs sufficient cumulative weight
@@ -326,7 +321,6 @@ fn should_authorize_deploy_with_multiple_keys() {
         .commit();
 }
 
-#[ignore]
 #[test]
 fn should_not_authorize_deploy_with_duplicated_keys() {
     // tests that authorized keys needs sufficient cumulative weight

@@ -8,7 +8,6 @@ use contract_ffi::value::Account;
 const GENESIS_ADDR: [u8; 32] = [7u8; 32];
 const ACCOUNT_1_ADDR: [u8; 32] = [1u8; 32];
 
-#[ignore]
 #[test]
 fn should_manage_associated_key() {
     // for a given account, should be able to add a new associated key and update

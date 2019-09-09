@@ -5,7 +5,6 @@ use engine_storage::global_state::in_memory::InMemoryGlobalState;
 
 const GENESIS_ADDR: [u8; 32] = [12; 32];
 
-#[ignore]
 #[test]
 fn regression_test_genesis_hash_mismatch() {
     let mut builder_base = WasmTestBuilder::default();

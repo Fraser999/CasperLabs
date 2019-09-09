@@ -9,7 +9,6 @@ use engine_storage::global_state::in_memory::InMemoryGlobalState;
 
 const GENESIS_ADDR: [u8; 32] = [6u8; 32];
 
-#[ignore]
 #[test]
 fn should_run_genesis() {
     let global_state = InMemoryGlobalState::empty().expect("should create global state");
@@ -31,7 +30,6 @@ fn should_run_genesis() {
     assert!(!response_root_hash.to_vec().is_empty());
 }
 
-#[ignore]
 #[test]
 fn test_genesis_hash_match() {
     let mut builder_base = WasmTestBuilder::default();

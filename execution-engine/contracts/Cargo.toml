@@ -1,0 +1,12 @@
+[package]
+name = "casperlabs-contracts"
+version = "0.1.0"
+authors = ["Fraser Hutchison <fraser@casperlabs.io>"]
+edition = "2018"
+build = "build.rs"
+
+[lib]
+path = "phony_lib.rs"
+
+[build-dependencies]
+fs_extra = "1.1.0"

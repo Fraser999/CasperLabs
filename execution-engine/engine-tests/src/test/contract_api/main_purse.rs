@@ -7,7 +7,6 @@ use contract_ffi::value::Account;
 const GENESIS_ADDR: [u8; 32] = [6u8; 32];
 const ACCOUNT_1_ADDR: [u8; 32] = [1u8; 32];
 
-#[ignore]
 #[test]
 fn should_run_main_purse_contract_genesis_account() {
     let mut builder = WasmTestBuilder::default();
@@ -31,7 +30,6 @@ fn should_run_main_purse_contract_genesis_account() {
         .commit();
 }
 
-#[ignore]
 #[test]
 fn should_run_main_purse_contract_account_1() {
     let account_key = Key::Account(ACCOUNT_1_ADDR);

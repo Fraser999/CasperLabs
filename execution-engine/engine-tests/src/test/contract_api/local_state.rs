@@ -9,7 +9,6 @@ use crate::support::test_support::{WasmTestBuilder, DEFAULT_BLOCK_TIME};
 
 const GENESIS_ADDR: [u8; 32] = [6u8; 32];
 
-#[ignore]
 #[test]
 fn should_run_local_state_contract() {
     // This test runs a contract that's after every call extends the same key with

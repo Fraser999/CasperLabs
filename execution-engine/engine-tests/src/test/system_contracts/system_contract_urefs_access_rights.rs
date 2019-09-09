@@ -5,7 +5,6 @@ use crate::support::test_support::{WasmTestBuilder, DEFAULT_BLOCK_TIME};
 const GENESIS_ADDR: [u8; 32] = [7u8; 32];
 const ACCOUNT_1_ADDR: [u8; 32] = [1u8; 32];
 
-#[ignore]
 #[test]
 fn should_have_read_only_access_to_system_contract_urefs() {
     let mut builder = WasmTestBuilder::default();

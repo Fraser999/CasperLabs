@@ -42,7 +42,6 @@ fn get_purse_key_from_mint_transform(mint_transform: &Transform) -> Key {
     *map_value
 }
 
-#[ignore]
 #[test]
 fn should_insert_mint_add_keys_transform() {
     let mint_transform: &Transform = {
@@ -75,7 +74,6 @@ fn should_insert_mint_add_keys_transform() {
     get_purse_key_from_mint_transform(mint_transform); // <-- assert equivalent
 }
 
-#[ignore]
 #[test]
 fn should_insert_into_account_known_urefs() {
     let account_1 = WasmTestBuilder::default()
@@ -109,7 +107,6 @@ fn should_insert_into_account_known_urefs() {
     );
 }
 
-#[ignore]
 #[test]
 fn should_create_usable_purse_id() {
     let mut builder = WasmTestBuilder::default();

@@ -73,7 +73,6 @@ fn get_test_result(builder: &mut WasmTestBuilder, exec_request: ExecuteRequest) 
         .finish()
 }
 
-#[ignore]
 #[test]
 fn should_exec_non_stored_code() {
     // using the new execute logic, passing code for both payment and session
@@ -139,7 +138,6 @@ fn should_exec_non_stored_code() {
     );
 }
 
-#[ignore]
 #[test]
 fn should_exec_stored_code_by_hash() {
     let genesis_addr = GENESIS_ADDR;
@@ -264,7 +262,6 @@ fn should_exec_stored_code_by_hash() {
     );
 }
 
-#[ignore]
 #[test]
 fn should_exec_stored_code_by_named_hash() {
     let genesis_addr = GENESIS_ADDR;
@@ -368,7 +365,6 @@ fn should_exec_stored_code_by_named_hash() {
     );
 }
 
-#[ignore]
 #[test]
 fn should_exec_stored_code_by_named_uref() {
     let genesis_addr = GENESIS_ADDR;
@@ -473,7 +469,6 @@ fn should_exec_stored_code_by_named_uref() {
     );
 }
 
-#[ignore]
 #[test]
 fn should_exec_payment_and_session_stored_code() {
     let genesis_addr = GENESIS_ADDR;
@@ -594,7 +589,6 @@ fn should_exec_payment_and_session_stored_code() {
     );
 }
 
-#[ignore]
 #[test]
 fn should_produce_same_transforms_by_uref_or_named_uref() {
     // get transforms for direct uref and named uref and compare them
@@ -731,7 +725,6 @@ fn should_produce_same_transforms_by_uref_or_named_uref() {
     );
 }
 
-#[ignore]
 #[test]
 fn should_produce_same_transforms_as_exec() {
     // using the new execute logic, passing code for both payment and session
@@ -808,7 +801,6 @@ fn should_produce_same_transforms_as_exec() {
     assert_eq!(execute_transforms, exec_transforms);
 }
 
-#[ignore]
 #[test]
 fn should_have_equivalent_transforms_with_stored_contract_pointers() {
     let genesis_addr = GENESIS_ADDR;

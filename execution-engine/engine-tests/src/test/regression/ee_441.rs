@@ -48,7 +48,6 @@ fn do_pass(pass: &str) -> (URef, URef) {
     )
 }
 
-#[ignore]
 #[test]
 fn should_properly_pass_rng_state_to_subcontracts() {
     // the baseline pass, no subcalls

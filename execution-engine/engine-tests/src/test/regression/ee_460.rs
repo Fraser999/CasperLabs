@@ -5,7 +5,6 @@ use crate::support::test_support::{WasmTestBuilder, DEFAULT_BLOCK_TIME};
 
 const GENESIS_ADDR: [u8; 32] = [6u8; 32];
 
-#[ignore]
 #[test]
 fn should_run_ee_460_no_side_effects_on_error_regression() {
     let result = WasmTestBuilder::default()

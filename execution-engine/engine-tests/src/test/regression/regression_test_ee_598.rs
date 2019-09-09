@@ -22,7 +22,6 @@ const GENESIS_VALIDATOR_BOND: u64 = 50_000;
 const ACCOUNT_1_BALANCE: u64 = 100_000;
 const ACCOUNT_1_BOND: u64 = 25_000;
 
-#[ignore]
 #[test]
 fn should_fail_unboding_more_than_it_was_staked_ee_598_regression() {
     let genesis_validators = {

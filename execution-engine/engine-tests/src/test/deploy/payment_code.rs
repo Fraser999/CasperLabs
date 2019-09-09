@@ -19,7 +19,6 @@ const ACCOUNT_1_ADDR: [u8; 32] = [42u8; 32];
 const STANDARD_PAYMENT_WASM: &str = "standard_payment.wasm";
 const DO_NOTHING_WASM: &str = "do_nothing.wasm";
 
-#[ignore]
 #[test]
 fn should_raise_insufficient_payment_when_caller_lacks_minimum_balance() {
     let genesis_public_key = PublicKey::new(GENESIS_ADDR);
@@ -94,7 +93,6 @@ fn should_raise_insufficient_payment_when_caller_lacks_minimum_balance() {
     );
 }
 
-#[ignore]
 #[test]
 fn should_raise_insufficient_payment_when_payment_code_does_not_pay_enough() {
     let genesis_public_key = PublicKey::new(GENESIS_ADDR);
@@ -179,7 +177,6 @@ fn should_raise_insufficient_payment_when_payment_code_does_not_pay_enough() {
     );
 }
 
-#[ignore]
 #[test]
 fn should_raise_insufficient_payment_when_payment_code_fails() {
     let genesis_addr = GENESIS_ADDR;
@@ -271,7 +268,6 @@ fn should_raise_insufficient_payment_when_payment_code_fails() {
     );
 }
 
-#[ignore]
 #[test]
 fn should_run_out_of_gas_when_session_code_exceeds_gas_limit() {
     let genesis_addr = GENESIS_ADDR;
@@ -317,7 +313,6 @@ fn should_run_out_of_gas_when_session_code_exceeds_gas_limit() {
     assert_eq!(error_message, "GasLimit", "expected gas limit");
 }
 
-#[ignore]
 #[test]
 fn should_correctly_charge_when_session_code_runs_out_of_gas() {
     let genesis_addr = GENESIS_ADDR;
@@ -414,7 +409,6 @@ fn should_correctly_charge_when_session_code_runs_out_of_gas() {
     assert_eq!(error_message, "GasLimit", "expected gas limit");
 }
 
-#[ignore]
 #[test]
 fn should_correctly_charge_when_session_code_fails() {
     let genesis_addr = GENESIS_ADDR;
@@ -511,7 +505,6 @@ fn should_correctly_charge_when_session_code_fails() {
     );
 }
 
-#[ignore]
 #[test]
 fn should_correctly_charge_when_session_code_succeeds() {
     let genesis_addr = GENESIS_ADDR;
@@ -609,7 +602,6 @@ fn should_correctly_charge_when_session_code_succeeds() {
     );
 }
 
-#[ignore]
 #[test]
 fn independent_standard_payments_should_not_write_the_same_keys() {
     let genesis_public_key = PublicKey::new(GENESIS_ADDR);
@@ -693,7 +685,6 @@ fn independent_standard_payments_should_not_write_the_same_keys() {
     assert_eq!(common_write_keys.count(), 0);
 }
 
-#[ignore]
 #[test]
 fn should_charge_non_main_purse() {
     // as account_1, create & fund a new purse and use that to pay for something

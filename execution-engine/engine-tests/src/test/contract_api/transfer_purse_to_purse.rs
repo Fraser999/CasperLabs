@@ -8,7 +8,6 @@ use crate::support::test_support::{WasmTestBuilder, DEFAULT_BLOCK_TIME};
 
 const GENESIS_ADDR: [u8; 32] = [12; 32];
 
-#[ignore]
 #[test]
 fn should_run_purse_to_purse_transfer() {
     let source = "purse:main".to_string();
@@ -107,7 +106,6 @@ fn should_run_purse_to_purse_transfer() {
     assert_eq!(main_purse_balance, &U512::from(99_999_999_958i64));
 }
 
-#[ignore]
 #[test]
 fn should_run_purse_to_purse_transfer_with_error() {
     // This test runs a contract that's after every call extends the same key with

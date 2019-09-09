@@ -4,7 +4,6 @@ use crate::support::test_support::WasmTestBuilder;
 
 const GENESIS_ADDR: [u8; 32] = [7u8; 32];
 
-#[ignore]
 #[test]
 fn should_run_get_blocktime_contract() {
     let block_time: u64 = 42;

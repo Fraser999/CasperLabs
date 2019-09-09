@@ -7,7 +7,6 @@ use engine_core::engine_state::EngineConfig;
 
 const GENESIS_ADDR: [u8; 32] = [7u8; 32];
 
-#[ignore]
 #[test]
 fn should_run_get_phase_contract() {
     let genesis_public_key = PublicKey::new(GENESIS_ADDR);

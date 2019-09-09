@@ -11,7 +11,6 @@ use crate::support::test_support::DEFAULT_BLOCK_TIME;
 
 const GENESIS_ADDR: [u8; 32] = [0u8; 32];
 
-#[ignore]
 #[test]
 fn should_execute_contracts_which_provide_extra_urefs() {
     let global_state = InMemoryGlobalState::empty().unwrap();

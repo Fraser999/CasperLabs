@@ -2,7 +2,6 @@
 
 members = [
     "contract-ffi",
-    "contracts/[!.]*/*",
     "engine-core",
     "engine-grpc-server",
     "engine-metrics-scraper",
@@ -12,13 +11,6 @@ members = [
     "engine-wasm-prep",
 ]
 
-default-members = [
-    "contract-ffi",
-    "engine-core",
-    "engine-grpc-server",
-    "engine-metrics-scraper",
-    "engine-shared",
-    "engine-storage",
-    "engine-tests",
-    "engine-wasm-prep",
+exclude = [
+    "contracts",
 ]

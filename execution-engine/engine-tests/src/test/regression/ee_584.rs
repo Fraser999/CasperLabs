@@ -8,7 +8,6 @@ use engine_shared::transform::Transform;
 
 const GENESIS_ADDR: [u8; 32] = [6u8; 32];
 
-#[ignore]
 #[test]
 fn should_run_ee_584_no_errored_session_transforms() {
     let genesis_public_key = PublicKey::new(GENESIS_ADDR);
