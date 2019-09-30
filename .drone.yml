@@ -131,8 +131,7 @@ steps:
 - name: run-rust-lints-pr
   commands:
   - "cd execution-engine"
-  - "~/.cargo/bin/rustup toolchain install $(cat rust-toolchain)"
-  - "~/.cargo/bin/rustup component add --toolchain=$(cat rust-toolchain) clippy"
+  - "make setup"
   - "make lint"
   image: "casperlabs/buildenv:latest"
   when:
