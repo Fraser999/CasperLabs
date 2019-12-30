@@ -6,11 +6,12 @@ use crate::engine_server::{mappings::ParsingError, state};
 
 impl From<CLValue> for state::CLValue {
     fn from(cl_value: CLValue) -> Self {
-        let (cl_type, bytes) = cl_value.destructure();
+        let (cl_type, bytes, uref_offsets) = cl_value.destructure();
 
         let mut pb_value = state::CLValue::new();
         pb_value.set_cl_type(cl_type.into());
         pb_value.set_serialized_value(bytes);
+        pb_value.set_uref_offsets(uref_offsets);
 
         pb_value
     }
@@ -21,7 +22,11 @@ impl TryFrom<state::CLValue> for CLValue {
 
     fn try_from(mut pb_value: state::CLValue) -> Result<Self, Self::Error> {
         let cl_type = pb_value.take_cl_type().try_into()?;
-        Ok(CLValue::from_components(cl_type, pb_value.serialized_value))
+        Ok(CLValue::from_components(
+            cl_type,
+            pb_value.serialized_value,
+            pb_value.uref_offsets,
+        ))
     }
 }
 

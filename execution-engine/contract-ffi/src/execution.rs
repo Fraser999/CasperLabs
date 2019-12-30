@@ -35,6 +35,10 @@ impl ToBytes for Phase {
     fn serialized_length(&self) -> usize {
         PHASE_SERIALIZED_LENGTH
     }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 impl FromBytes for Phase {

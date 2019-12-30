@@ -89,6 +89,10 @@ impl ToBytes for Error {
     fn serialized_length(&self) -> usize {
         U8_SERIALIZED_LENGTH
     }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        Vec::new()
+    }
 }
 
 impl FromBytes for Error {

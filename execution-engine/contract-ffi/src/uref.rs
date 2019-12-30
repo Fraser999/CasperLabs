@@ -1,5 +1,8 @@
 //! Home of [`URef`](crate::uref::URef), which represents an unforgeable reference.
 
+// Can be removed once https://github.com/rust-lang/rustfmt/issues/3362 is resolved.
+#[rustfmt::skip]
+use alloc::vec;
 use alloc::{format, string::String, vec::Vec};
 
 use base16;
@@ -66,6 +69,10 @@ impl bytesrepr::ToBytes for AccessRights {
 
     fn serialized_length(&self) -> usize {
         self.bits.serialized_length()
+    }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        vec![]
     }
 }
 
@@ -197,6 +204,10 @@ impl bytesrepr::ToBytes for URef {
 
     fn serialized_length(&self) -> usize {
         self.0.serialized_length() + self.1.serialized_length()
+    }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        vec![0]
     }
 }
 

@@ -77,6 +77,7 @@ message CLType {
 message CLValue {
     CLType cl_type = 1;
     bytes serialized_value = 2;
+    repeated uint32 uref_offsets = 3;
 }
 
 // Value stored under a key in global state.

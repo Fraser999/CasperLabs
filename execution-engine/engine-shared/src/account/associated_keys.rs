@@ -112,6 +112,10 @@ impl ToBytes for AssociatedKeys {
     fn serialized_length(&self) -> usize {
         self.0.serialized_length()
     }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 impl FromBytes for AssociatedKeys {

@@ -70,6 +70,10 @@ impl ToBytes for WasmCosts {
     fn serialized_length(&self) -> usize {
         WASM_COSTS_SERIALIZED_LENGTH
     }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 impl FromBytes for WasmCosts {

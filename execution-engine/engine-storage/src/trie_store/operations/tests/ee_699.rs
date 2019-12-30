@@ -110,6 +110,10 @@ impl ToBytes for PublicKey {
                 PublicKey::Long(key) => key.serialized_length(),
             }
     }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 impl FromBytes for PublicKey {
@@ -195,6 +199,10 @@ impl ToBytes for TestKey {
                 TestKey::URef(uref) => uref.serialized_length(),
                 TestKey::Local(local) => local.serialized_length(),
             }
+    }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        vec![]
     }
 }
 

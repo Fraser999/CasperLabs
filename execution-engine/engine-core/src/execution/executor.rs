@@ -121,7 +121,7 @@ impl Executor {
 
         let arguments = arguments
             .into_iter()
-            .map(|bytes: Vec<u8>| CLValue::from_components(CLType::Any, bytes))
+            .map(|bytes: Vec<u8>| CLValue::from_components(CLType::Any, bytes, vec![]))
             .collect();
 
         let context = RuntimeContext::new(

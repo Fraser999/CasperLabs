@@ -79,6 +79,12 @@ impl ToBytes for ProtocolData {
             + self.mint.serialized_length()
             + self.proof_of_stake.serialized_length()
     }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        let mint_offset = self.wasm_costs.serialized_length() as u32;
+        let pos_offset = mint_offset + self.mint.serialized_length() as u32;
+        vec![mint_offset, pos_offset]
+    }
 }
 
 impl FromBytes for ProtocolData {

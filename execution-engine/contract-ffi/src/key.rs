@@ -1,6 +1,9 @@
 //! Home of [`Key`](crate::key::Key), the type for indexing all data stored on the CasperLabs
 //! Platform.
 
+// Can be removed once https://github.com/rust-lang/rustfmt/issues/3362 is resolved.
+#[rustfmt::skip]
+use alloc::vec;
 use alloc::{format, vec::Vec};
 
 use base16;
@@ -260,6 +263,13 @@ impl ToBytes for Key {
             Key::Hash(_) => KEY_HASH_SERIALIZED_LENGTH,
             Key::URef(uref) => KEY_ID_SERIALIZED_LENGTH + uref.serialized_length(),
             Key::Local(_) => KEY_LOCAL_SERIALIZED_LENGTH,
+        }
+    }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        match self {
+            Key::Account(_) | Key::Hash(_) | Key::Local(_) => vec![],
+            Key::URef(_) => vec![KEY_ID_SERIALIZED_LENGTH as u32],
         }
     }
 }

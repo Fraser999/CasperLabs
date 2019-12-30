@@ -106,6 +106,10 @@ macro_rules! make_array_newtype {
             fn serialized_length(&self) -> usize {
                 self.0.serialized_length()
             }
+
+            fn uref_offsets(&self) -> Vec<u32> {
+                vec![]
+            }
         }
 
         impl bytesrepr::FromBytes for $name {

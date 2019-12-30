@@ -6,6 +6,7 @@ engine-grpc-server/src/engine_server/transforms.rs
 engine-tests/*.data
 engine-tests/*.data.old
 engine-tests/*.svg
+*/proptest-regressions/*
 
 #
 # AssemblyScript

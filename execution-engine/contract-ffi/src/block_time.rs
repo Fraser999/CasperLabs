@@ -34,6 +34,10 @@ impl ToBytes for BlockTime {
     fn serialized_length(&self) -> usize {
         self.0.serialized_length()
     }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        Vec::new()
+    }
 }
 
 impl FromBytes for BlockTime {

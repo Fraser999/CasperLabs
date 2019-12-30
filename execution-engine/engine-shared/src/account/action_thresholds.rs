@@ -100,6 +100,10 @@ impl ToBytes for ActionThresholds {
     fn serialized_length(&self) -> usize {
         2 * WEIGHT_SERIALIZED_LENGTH
     }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 impl FromBytes for ActionThresholds {

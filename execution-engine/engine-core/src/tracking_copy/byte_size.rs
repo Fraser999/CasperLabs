@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, mem};
 
-use contract_ffi::key::Key;
+use contract_ffi::{bytesrepr::ToBytes, key::Key};
 use engine_shared::{account::Account, contract::Contract, stored_value::StoredValue};
 
 /// Returns byte size of the element - both heap size and stack size.

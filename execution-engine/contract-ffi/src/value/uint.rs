@@ -59,6 +59,10 @@ macro_rules! ser_and_num_impls {
                 let non_zero_bytes = buf.iter().rev().skip_while(|b| **b == 0).count();
                 U8_SERIALIZED_LENGTH + non_zero_bytes
             }
+
+            fn uref_offsets(&self) -> Vec<u32> {
+                Vec::new()
+            }
         }
 
         impl FromBytes for $type {

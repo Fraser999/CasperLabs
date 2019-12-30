@@ -35,6 +35,7 @@ pub trait ToBytes {
         self.to_bytes()
     }
     fn serialized_length(&self) -> usize;
+    fn uref_offsets(&self) -> Vec<u32>;
 }
 
 pub trait FromBytes: Sized {
@@ -95,6 +96,10 @@ impl ToBytes for bool {
     fn serialized_length(&self) -> usize {
         1
     }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 impl FromBytes for bool {
@@ -118,6 +123,10 @@ impl ToBytes for u8 {
     fn serialized_length(&self) -> usize {
         U8_SERIALIZED_LENGTH
     }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 impl FromBytes for u8 {
@@ -138,6 +147,10 @@ macro_rules! impl_to_from_bytes_for_integral {
 
             fn serialized_length(&self) -> usize {
                 $serialized_length
+            }
+
+            fn uref_offsets(&self) -> Vec<u32> {
+                vec![]
             }
         }
 
@@ -193,6 +206,18 @@ impl<T: ToBytes> ToBytes for Vec<T> {
     default fn serialized_length(&self) -> usize {
         U32_SERIALIZED_LENGTH + self.iter().map(ToBytes::serialized_length).sum::<usize>()
     }
+
+    default fn uref_offsets(&self) -> Vec<u32> {
+        let mut result = vec![];
+        let mut running_offset = U32_SERIALIZED_LENGTH as u32;
+        for item in self {
+            for offset in item.uref_offsets() {
+                result.push(running_offset + offset);
+            }
+            running_offset += item.serialized_length() as u32;
+        }
+        result
+    }
 }
 
 impl<T: FromBytes> FromBytes for Vec<T> {
@@ -239,6 +264,10 @@ impl ToBytes for Vec<u8> {
 
     fn serialized_length(&self) -> usize {
         U32_SERIALIZED_LENGTH + self.len()
+    }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        vec![]
     }
 }
 
@@ -293,6 +322,19 @@ impl<T: ToBytes> ToBytes for Option<T> {
                 None => 0,
             }
     }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        match self {
+            Some(v) => {
+                let offsets = v.uref_offsets();
+                offsets
+                    .into_iter()
+                    .map(|offset| offset + U8_SERIALIZED_LENGTH as u32)
+                    .collect()
+            }
+            None => vec![],
+        }
+    }
 }
 
 impl<T: FromBytes> FromBytes for Option<T> {
@@ -334,6 +376,18 @@ macro_rules! impl_to_from_bytes_for_array {
                 default fn serialized_length(&self) -> usize {
                     U32_SERIALIZED_LENGTH +
                         self.iter().map(ToBytes::serialized_length).sum::<usize>()
+                }
+
+                default fn uref_offsets(&self) -> Vec<u32> {
+                    let mut result = vec![];
+                    let mut running_offset = U32_SERIALIZED_LENGTH as u32;
+                    for item in self.iter() {
+                        for offset in item.uref_offsets() {
+                            result.push(running_offset + offset);
+                        }
+                        running_offset += item.serialized_length() as u32;
+                    }
+                    result
                 }
             }
 
@@ -416,6 +470,10 @@ impl ToBytes for String {
     fn serialized_length(&self) -> usize {
         self.as_str().serialized_length()
     }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 impl FromBytes for String {
@@ -433,6 +491,10 @@ impl ToBytes for () {
 
     fn serialized_length(&self) -> usize {
         0
+    }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        vec![]
     }
 }
 
@@ -485,6 +547,25 @@ where
                 .map(|(key, value)| key.serialized_length() + value.serialized_length())
                 .sum::<usize>()
     }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        let mut result = vec![];
+        let mut running_offset = U32_SERIALIZED_LENGTH as u32;
+
+        for (key, value) in self.iter() {
+            for offset in key.uref_offsets() {
+                result.push(running_offset + offset);
+            }
+            running_offset += key.serialized_length() as u32;
+
+            for offset in value.uref_offsets() {
+                result.push(running_offset + offset);
+            }
+            running_offset += value.serialized_length() as u32;
+        }
+
+        result
+    }
 }
 
 impl<K, V> FromBytes for BTreeMap<K, V>
@@ -516,6 +597,10 @@ impl ToBytes for str {
     fn serialized_length(&self) -> usize {
         U32_SERIALIZED_LENGTH + self.as_bytes().len()
     }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 impl ToBytes for &str {
@@ -525,6 +610,10 @@ impl ToBytes for &str {
 
     fn serialized_length(&self) -> usize {
         (*self).serialized_length()
+    }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        vec![]
     }
 }
 
@@ -546,6 +635,17 @@ impl<T: ToBytes, E: ToBytes> ToBytes for Result<T, E> {
                 Ok(ok) => ok.serialized_length(),
                 Err(error) => error.serialized_length(),
             }
+    }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        let offsets = match self {
+            Ok(ok) => ok.uref_offsets(),
+            Err(error) => error.uref_offsets(),
+        };
+        offsets
+            .into_iter()
+            .map(|offset| offset + U8_SERIALIZED_LENGTH as u32)
+            .collect()
     }
 }
 
@@ -578,6 +678,10 @@ impl ToBytes for SemVer {
     fn serialized_length(&self) -> usize {
         SEM_VER_SERIALIZED_LENGTH
     }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 impl FromBytes for SemVer {
@@ -597,6 +701,10 @@ impl ToBytes for ProtocolVersion {
     fn serialized_length(&self) -> usize {
         self.value().serialized_length()
     }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 impl FromBytes for ProtocolVersion {
@@ -614,6 +722,10 @@ impl<T1: ToBytes> ToBytes for (T1,) {
 
     fn serialized_length(&self) -> usize {
         self.0.serialized_length()
+    }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        self.0.uref_offsets()
     }
 }
 
@@ -634,6 +746,19 @@ impl<T1: ToBytes, T2: ToBytes> ToBytes for (T1, T2) {
 
     fn serialized_length(&self) -> usize {
         self.0.serialized_length() + self.1.serialized_length()
+    }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        self.0
+            .uref_offsets()
+            .into_iter()
+            .chain(
+                self.1
+                    .uref_offsets()
+                    .into_iter()
+                    .map(|offset| offset + self.0.serialized_length() as u32),
+            )
+            .collect()
     }
 }
 
@@ -656,6 +781,22 @@ impl<T1: ToBytes, T2: ToBytes, T3: ToBytes> ToBytes for (T1, T2, T3) {
 
     fn serialized_length(&self) -> usize {
         self.0.serialized_length() + self.1.serialized_length() + self.2.serialized_length()
+    }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        self.0
+            .uref_offsets()
+            .into_iter()
+            .chain(
+                self.1
+                    .uref_offsets()
+                    .into_iter()
+                    .map(|offset| offset + self.0.serialized_length() as u32),
+            )
+            .chain(self.2.uref_offsets().into_iter().map(|offset| {
+                offset + self.0.serialized_length() as u32 + self.1.serialized_length() as u32
+            }))
+            .collect()
     }
 }
 

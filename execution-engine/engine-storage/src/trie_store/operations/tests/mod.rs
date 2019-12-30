@@ -45,6 +45,10 @@ impl ToBytes for TestKey {
     fn serialized_length(&self) -> usize {
         TEST_KEY_LENGTH
     }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 impl FromBytes for TestKey {
@@ -69,6 +73,10 @@ impl ToBytes for TestValue {
 
     fn serialized_length(&self) -> usize {
         TEST_VAL_LENGTH
+    }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        vec![]
     }
 }
 

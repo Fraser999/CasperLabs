@@ -82,6 +82,21 @@ impl ToBytes for Contract {
             + self.named_keys.serialized_length()
             + self.protocol_version.serialized_length()
     }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        // We probably don't need to actually calculate the offsets here since a serialized Contract
+        // shouldn't be getting passed from the client to the host, and hence shouldn't be used as a
+        // means of discovering new URefs.  So we could likely just return `vec![]` here without any
+        // negative effects.
+        let mut result = vec![];
+        let running_offset = self.bytes.serialized_length() as u32;
+
+        for offset in self.named_keys.uref_offsets() {
+            result.push(running_offset + offset);
+        }
+
+        result
+    }
 }
 
 impl FromBytes for Contract {

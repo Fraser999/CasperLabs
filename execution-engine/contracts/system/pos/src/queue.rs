@@ -61,6 +61,10 @@ impl ToBytes for QueueEntry {
             + self.amount.serialized_length()
             + self.timestamp.serialized_length()
     }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        Vec::new()
+    }
 }
 
 impl CLTyped for QueueEntry {
@@ -157,6 +161,10 @@ impl ToBytes for Queue {
 
     fn serialized_length(&self) -> usize {
         U64_SERIALIZED_LENGTH + self.0.iter().map(ToBytes::serialized_length).sum::<usize>()
+    }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        Vec::new()
     }
 }
 

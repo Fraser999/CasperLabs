@@ -1,7 +1,8 @@
 use alloc::vec::Vec;
 
 use crate::{
-    bytesrepr::{self, FromBytes, ToBytes, U32_SERIALIZED_LENGTH},
+    bytesrepr::{self, FromBytes, ToBytes},
+    uref::URef,
     value::cl_type::{CLType, CLTyped},
 };
 
@@ -17,20 +18,29 @@ pub enum CLValueError {
     Type(CLTypeMismatch),
 }
 
+impl From<bytesrepr::Error> for CLValueError {
+    fn from(error: bytesrepr::Error) -> Self {
+        CLValueError::Serialization(error)
+    }
+}
+
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct CLValue {
     cl_type: CLType,
     bytes: Vec<u8>,
+    uref_offsets: Vec<u32>,
 }
 
 impl CLValue {
     /// Constructs a `CLValue` from `t`.
     pub fn from_t<T: CLTyped + ToBytes>(t: T) -> Result<CLValue, CLValueError> {
-        let bytes = t.into_bytes().map_err(CLValueError::Serialization)?;
+        let uref_offsets = t.uref_offsets();
+        let bytes = t.into_bytes()?;
 
         Ok(CLValue {
             cl_type: T::cl_type(),
             bytes,
+            uref_offsets,
         })
     }
 
@@ -39,7 +49,7 @@ impl CLValue {
         let expected = T::cl_type();
 
         if self.cl_type == expected {
-            bytesrepr::deserialize(self.bytes).map_err(CLValueError::Serialization)
+            Ok(bytesrepr::deserialize(self.bytes)?)
         } else {
             Err(CLValueError::Type(CLTypeMismatch {
                 expected,
@@ -51,15 +61,19 @@ impl CLValue {
     // This is only required in order to implement `TryFrom<state::CLValue> for CLValue` (i.e. the
     // conversion from the Protobuf `CLValue`) in a separate module to this one.
     #[doc(hidden)]
-    pub fn from_components(cl_type: CLType, bytes: Vec<u8>) -> Self {
-        Self { cl_type, bytes }
+    pub fn from_components(cl_type: CLType, bytes: Vec<u8>, uref_offsets: Vec<u32>) -> Self {
+        Self {
+            cl_type,
+            bytes,
+            uref_offsets,
+        }
     }
 
     // This is only required in order to implement `From<CLValue> for state::CLValue` (i.e. the
     // conversion to the Protobuf `CLValue`) in a separate module to this one.
     #[doc(hidden)]
-    pub fn destructure(self) -> (CLType, Vec<u8>) {
-        (self.cl_type, self.bytes)
+    pub fn destructure(self) -> (CLType, Vec<u8>, Vec<u32>) {
+        (self.cl_type, self.bytes, self.uref_offsets)
     }
 
     pub fn cl_type(&self) -> &CLType {
@@ -71,11 +85,15 @@ impl CLValue {
         &self.bytes
     }
 
-    /// Returns the length of the `Vec<u8>` yielded after calling `self.to_bytes().unwrap()`.
-    ///
-    /// Note, this method doesn't actually serialize `self`, and hence is relatively cheap.
-    pub fn serialized_length(&self) -> usize {
-        self.cl_type.serialized_length() + U32_SERIALIZED_LENGTH + self.bytes.len()
+    pub fn contained_urefs(&self) -> Result<Vec<URef>, CLValueError> {
+        let mut result = Vec::with_capacity(self.uref_offsets.len());
+        for offset in &self.uref_offsets {
+            let (_skipped_bytes, serialized_uref_with_remainder) =
+                bytesrepr::safe_split_at(&self.bytes, *offset as usize)?;
+            let (uref, _remainder) = URef::from_bytes(serialized_uref_with_remainder)?;
+            result.push(uref);
+        }
+        Ok(result)
     }
 }
 
@@ -87,11 +105,18 @@ impl ToBytes for CLValue {
     fn into_bytes(self) -> Result<Vec<u8>, bytesrepr::Error> {
         let mut result = self.bytes.into_bytes()?;
         self.cl_type.append_bytes(&mut result);
+        result.append(&mut self.uref_offsets.into_bytes()?);
         Ok(result)
     }
 
     fn serialized_length(&self) -> usize {
-        self.bytes.serialized_length() + self.cl_type.serialized_length()
+        self.bytes.serialized_length()
+            + self.cl_type.serialized_length()
+            + self.uref_offsets.serialized_length()
+    }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        self.uref_offsets.clone()
     }
 }
 
@@ -99,27 +124,49 @@ impl FromBytes for CLValue {
     fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), bytesrepr::Error> {
         let (bytes, remainder) = Vec::<u8>::from_bytes(bytes)?;
         let (cl_type, remainder) = CLType::from_bytes(remainder)?;
-        let cl_value = CLValue { cl_type, bytes };
+        let (uref_offsets, remainder) = Vec::<u32>::from_bytes(remainder)?;
+        let cl_value = CLValue {
+            cl_type,
+            bytes,
+            uref_offsets,
+        };
         Ok((cl_value, remainder))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::bytesrepr::deserialize;
     use alloc::collections::BTreeMap;
 
+    use super::*;
+    use crate::{
+        bytesrepr::deserialize,
+        uref::{AccessRights, URef},
+    };
+
     #[test]
-    fn ser_cl_value() {
-        let mut map: BTreeMap<String, u64> = BTreeMap::new();
-        map.insert(String::from("abc"), 1);
-        map.insert(String::from("xyz"), 2);
-        let v = CLValue::from_t(map.clone()).unwrap();
-        let ser_v = v.clone().into_bytes().unwrap();
-        let w = deserialize::<CLValue>(ser_v).unwrap();
-        assert_eq!(v, w);
-        let x = w.into_t().unwrap();
-        assert_eq!(map, x);
+    fn should_serialize_cl_value() {
+        let urefs = vec![
+            URef::new([1; 32], AccessRights::ADD_WRITE),
+            URef::new([2; 32], AccessRights::ADD_WRITE).remove_access_rights(),
+            URef::new([3; 32], AccessRights::READ),
+        ];
+
+        let mut map = BTreeMap::new();
+        map.insert(String::from("111"), urefs[0].clone());
+        map.insert(String::from("2"), urefs[1].clone());
+        map.insert(String::from("33333333333333"), urefs[2].clone());
+
+        let cl_value = CLValue::from_t(map.clone()).unwrap();
+
+        let recovered_urefs = cl_value.contained_urefs().unwrap();
+        assert_eq!(urefs, recovered_urefs);
+
+        let serialized_cl_value = cl_value.clone().into_bytes().unwrap();
+        let parsed_cl_value = deserialize::<CLValue>(serialized_cl_value).unwrap();
+        assert_eq!(cl_value, parsed_cl_value);
+
+        let parsed_map = parsed_cl_value.into_t().unwrap();
+        assert_eq!(map, parsed_map);
     }
 }

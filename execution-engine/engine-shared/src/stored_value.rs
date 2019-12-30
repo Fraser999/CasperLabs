@@ -123,6 +123,22 @@ impl ToBytes for StoredValue {
                 StoredValue::Contract(contract) => contract.serialized_length(),
             }
     }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        // We probably don't need to actually calculate the offsets here since a serialized
+        // StoredValue shouldn't be getting passed from the client to the host, and hence shouldn't
+        // be used as a means of discovering new URefs.  So we could likely just return `vec![]`
+        // here without any negative effects.
+        let offsets = match self {
+            StoredValue::CLValue(cl_value) => cl_value.uref_offsets(),
+            StoredValue::Account(account) => account.uref_offsets(),
+            StoredValue::Contract(contract) => contract.uref_offsets(),
+        };
+        offsets
+            .into_iter()
+            .map(|offset| offset + U8_SERIALIZED_LENGTH as u32)
+            .collect()
+    }
 }
 
 impl FromBytes for StoredValue {

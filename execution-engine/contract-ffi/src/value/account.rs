@@ -1,3 +1,6 @@
+// Can be removed once https://github.com/rust-lang/rustfmt/issues/3362 is resolved.
+#[rustfmt::skip]
+use alloc::vec;
 use alloc::{boxed::Box, vec::Vec};
 use core::{
     convert::TryFrom,
@@ -69,6 +72,10 @@ impl ToBytes for PurseId {
 
     fn serialized_length(&self) -> usize {
         self.0.serialized_length()
+    }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        vec![0]
     }
 }
 
@@ -189,6 +196,10 @@ impl ToBytes for Weight {
     fn serialized_length(&self) -> usize {
         self.0.serialized_length()
     }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 impl FromBytes for Weight {
@@ -273,6 +284,10 @@ impl ToBytes for PublicKey {
 
     fn serialized_length(&self) -> usize {
         PUBLIC_KEY_SERIALIZED_LENGTH
+    }
+
+    fn uref_offsets(&self) -> Vec<u32> {
+        vec![]
     }
 }
 
