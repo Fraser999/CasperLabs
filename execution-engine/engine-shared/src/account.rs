@@ -231,6 +231,14 @@ impl ToBytes for Account {
         result.append(&mut self.action_thresholds.to_bytes()?);
         Ok(result)
     }
+
+    fn serialized_length(&self) -> usize {
+        self.public_key.serialized_length()
+            + self.named_keys.serialized_length()
+            + self.purse_id.serialized_length()
+            + self.associated_keys.serialized_length()
+            + self.action_thresholds.serialized_length()
+    }
 }
 
 impl FromBytes for Account {

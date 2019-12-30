@@ -3,7 +3,7 @@ use core::result;
 
 use contract_ffi::{
     block_time::BlockTime,
-    bytesrepr::{self, FromBytes, ToBytes},
+    bytesrepr::{self, FromBytes, ToBytes, U64_SERIALIZED_LENGTH},
     contract_api::storage,
     system_contracts::pos::{Error, Result},
     value::{account::PublicKey, CLType, CLTyped, U512},
@@ -54,6 +54,12 @@ impl ToBytes for QueueEntry {
             .chain(self.amount.to_bytes()?)
             .chain(self.timestamp.to_bytes()?)
             .collect())
+    }
+
+    fn serialized_length(&self) -> usize {
+        self.validator.serialized_length()
+            + self.amount.serialized_length()
+            + self.timestamp.serialized_length()
     }
 }
 
@@ -140,6 +146,20 @@ impl Queue {
     }
 }
 
+impl ToBytes for Queue {
+    fn to_bytes(&self) -> result::Result<Vec<u8>, bytesrepr::Error> {
+        let mut bytes = (self.0.len() as u64).to_bytes()?; // TODO: Allocate correct capacity.
+        for entry in &self.0 {
+            bytes.append(&mut entry.to_bytes()?);
+        }
+        Ok(bytes)
+    }
+
+    fn serialized_length(&self) -> usize {
+        U64_SERIALIZED_LENGTH + self.0.iter().map(ToBytes::serialized_length).sum::<usize>()
+    }
+}
+
 impl FromBytes for Queue {
     fn from_bytes(bytes: &[u8]) -> result::Result<(Self, &[u8]), bytesrepr::Error> {
         let (len, mut bytes) = u64::from_bytes(bytes)?;
@@ -150,16 +170,6 @@ impl FromBytes for Queue {
             queue.push(entry);
         }
         Ok((Queue(queue), bytes))
-    }
-}
-
-impl ToBytes for Queue {
-    fn to_bytes(&self) -> result::Result<Vec<u8>, bytesrepr::Error> {
-        let mut bytes = (self.0.len() as u64).to_bytes()?; // TODO: Allocate correct capacity.
-        for entry in &self.0 {
-            bytes.append(&mut entry.to_bytes()?);
-        }
-        Ok(bytes)
     }
 }
 

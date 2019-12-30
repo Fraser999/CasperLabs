@@ -30,6 +30,10 @@ impl ToBytes for BlockTime {
     fn to_bytes(&self) -> Result<Vec<u8>, Error> {
         self.0.to_bytes()
     }
+
+    fn serialized_length(&self) -> usize {
+        self.0.serialized_length()
+    }
 }
 
 impl FromBytes for BlockTime {

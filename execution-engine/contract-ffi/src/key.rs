@@ -68,18 +68,8 @@ impl Key {
         }
     }
 
-    /// Calculates serialized size without actually serializing data.
-    pub fn serialized_size(&self) -> usize {
-        match self {
-            Key::Account(_) => KEY_ACCOUNT_SERIALIZED_LENGTH,
-            Key::Hash(_) => KEY_HASH_SERIALIZED_LENGTH,
-            Key::URef(_) => KEY_UREF_SERIALIZED_LENGTH,
-            Key::Local(_) => KEY_LOCAL_SERIALIZED_LENGTH,
-        }
-    }
-
     /// Returns max size a [`Key`] can be serialized into.
-    pub const fn serialized_size_hint() -> usize {
+    pub const fn max_serialized_length() -> usize {
         KEY_UREF_SERIALIZED_LENGTH
     }
 }
@@ -263,6 +253,15 @@ impl ToBytes for Key {
             }
         }
     }
+
+    fn serialized_length(&self) -> usize {
+        match self {
+            Key::Account(_) => KEY_ACCOUNT_SERIALIZED_LENGTH,
+            Key::Hash(_) => KEY_HASH_SERIALIZED_LENGTH,
+            Key::URef(uref) => KEY_ID_SERIALIZED_LENGTH + uref.serialized_length(),
+            Key::Local(_) => KEY_LOCAL_SERIALIZED_LENGTH,
+        }
+    }
 }
 
 impl FromBytes for Key {
@@ -287,38 +286,6 @@ impl FromBytes for Key {
             }
             _ => Err(Error::FormattingError),
         }
-    }
-}
-
-impl FromBytes for Vec<Key> {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), Error> {
-        let (size, rest): (u32, &[u8]) = FromBytes::from_bytes(bytes)?;
-        let mut result = Vec::new();
-        result.try_reserve_exact(size as usize)?;
-        let mut stream = rest;
-        for _ in 0..size {
-            let (t, rem): (Key, &[u8]) = FromBytes::from_bytes(stream)?;
-            result.push(t);
-            stream = rem;
-        }
-        Ok((result, stream))
-    }
-}
-
-impl ToBytes for Vec<Key> {
-    fn to_bytes(&self) -> Result<Vec<u8>, Error> {
-        let size = self.len() as u32;
-        let mut result: Vec<u8> =
-            Vec::with_capacity(4 + (size as usize) * KEY_UREF_SERIALIZED_LENGTH);
-        result.extend(size.to_bytes()?);
-        result.extend(
-            self.iter()
-                .map(ToBytes::to_bytes)
-                .collect::<Result<Vec<_>, _>>()?
-                .into_iter()
-                .flatten(),
-        );
-        Ok(result)
     }
 }
 
@@ -561,8 +528,8 @@ mod tests {
         for &(key, const_size) in keys.iter() {
             // println!("{:?}={}", key, const_size);
             let bytes = key.to_bytes().expect("should serialize");
-            assert_eq!(key.serialized_size(), const_size);
-            assert_eq!(bytes.len(), key.serialized_size());
+            assert_eq!(key.serialized_length(), const_size);
+            assert_eq!(bytes.len(), key.serialized_length());
         }
     }
 
@@ -575,6 +542,6 @@ mod tests {
             KEY_LOCAL_SERIALIZED_LENGTH,
         ];
         sizes.sort();
-        assert_eq!(sizes.last().cloned().unwrap(), Key::serialized_size_hint());
+        assert_eq!(sizes.last().cloned().unwrap(), Key::max_serialized_length());
     }
 }

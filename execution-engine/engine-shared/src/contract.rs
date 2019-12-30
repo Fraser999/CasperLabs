@@ -76,6 +76,12 @@ impl ToBytes for Contract {
         result.append(&mut self.protocol_version.to_bytes()?);
         Ok(result)
     }
+
+    fn serialized_length(&self) -> usize {
+        self.bytes.serialized_length()
+            + self.named_keys.serialized_length()
+            + self.protocol_version.serialized_length()
+    }
 }
 
 impl FromBytes for Contract {

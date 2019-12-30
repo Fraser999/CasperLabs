@@ -2,7 +2,7 @@ use alloc::vec::Vec;
 
 use num_traits::{AsPrimitive, Bounded, Num, One, Unsigned, WrappingAdd, WrappingSub, Zero};
 
-use crate::bytesrepr::{self, Error, FromBytes, ToBytes};
+use crate::bytesrepr::{self, Error, FromBytes, ToBytes, U8_SERIALIZED_LENGTH};
 
 #[allow(
     clippy::assign_op_pattern,
@@ -50,6 +50,14 @@ macro_rules! ser_and_num_impls {
                 non_zero_bytes.push(num_bytes);
                 non_zero_bytes.reverse();
                 Ok(non_zero_bytes)
+            }
+
+            fn serialized_length(&self) -> usize {
+                // TODO(Fraser) - optimize
+                let mut buf = [0u8; $total_bytes];
+                self.to_little_endian(&mut buf);
+                let non_zero_bytes = buf.iter().rev().skip_while(|b| **b == 0).count();
+                U8_SERIALIZED_LENGTH + non_zero_bytes
             }
         }
 

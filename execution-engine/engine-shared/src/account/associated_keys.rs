@@ -106,7 +106,11 @@ impl AssociatedKeys {
 
 impl ToBytes for AssociatedKeys {
     fn to_bytes(&self) -> Result<Vec<u8>, Error> {
-        ToBytes::to_bytes(&self.0)
+        self.0.to_bytes()
+    }
+
+    fn serialized_length(&self) -> usize {
+        self.0.serialized_length()
     }
 }
 

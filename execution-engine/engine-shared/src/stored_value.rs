@@ -1,7 +1,7 @@
 use std::{convert::TryFrom, mem, u32};
 
 use contract_ffi::{
-    bytesrepr::{self, FromBytes, ToBytes},
+    bytesrepr::{self, FromBytes, ToBytes, U8_SERIALIZED_LENGTH},
     value::CLValue,
 };
 
@@ -113,6 +113,15 @@ impl ToBytes for StoredValue {
             StoredValue::Account(account) => to_bytes(account, Tag::Account),
             StoredValue::Contract(contract) => to_bytes(contract, Tag::Contract),
         }
+    }
+
+    fn serialized_length(&self) -> usize {
+        U8_SERIALIZED_LENGTH
+            + match self {
+                StoredValue::CLValue(cl_value) => cl_value.serialized_length(),
+                StoredValue::Account(account) => account.serialized_length(),
+                StoredValue::Contract(contract) => contract.serialized_length(),
+            }
     }
 }
 

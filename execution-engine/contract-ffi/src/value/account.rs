@@ -64,7 +64,11 @@ impl From<PurseId> for URef {
 
 impl ToBytes for PurseId {
     fn to_bytes(&self) -> Result<Vec<u8>, Error> {
-        ToBytes::to_bytes(&self.0)
+        self.0.to_bytes()
+    }
+
+    fn serialized_length(&self) -> usize {
+        self.0.serialized_length()
     }
 }
 
@@ -179,7 +183,11 @@ impl Weight {
 
 impl ToBytes for Weight {
     fn to_bytes(&self) -> Result<Vec<u8>, Error> {
-        ToBytes::to_bytes(&self.0)
+        self.0.to_bytes()
+    }
+
+    fn serialized_length(&self) -> usize {
+        self.0.serialized_length()
     }
 }
 
@@ -260,7 +268,11 @@ impl TryFrom<&[u8]> for PublicKey {
 
 impl ToBytes for PublicKey {
     fn to_bytes(&self) -> Result<Vec<u8>, Error> {
-        ToBytes::to_bytes(&self.0)
+        self.0.to_bytes()
+    }
+
+    fn serialized_length(&self) -> usize {
+        PUBLIC_KEY_SERIALIZED_LENGTH
     }
 }
 

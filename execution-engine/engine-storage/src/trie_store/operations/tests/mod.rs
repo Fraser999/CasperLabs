@@ -41,6 +41,10 @@ impl ToBytes for TestKey {
     fn to_bytes(&self) -> Result<Vec<u8>, bytesrepr::Error> {
         Ok(self.0.to_vec())
     }
+
+    fn serialized_length(&self) -> usize {
+        TEST_KEY_LENGTH
+    }
 }
 
 impl FromBytes for TestKey {
@@ -61,6 +65,10 @@ struct TestValue([u8; TEST_VAL_LENGTH]);
 impl ToBytes for TestValue {
     fn to_bytes(&self) -> Result<Vec<u8>, bytesrepr::Error> {
         Ok(self.0.to_vec())
+    }
+
+    fn serialized_length(&self) -> usize {
+        TEST_VAL_LENGTH
     }
 }
 

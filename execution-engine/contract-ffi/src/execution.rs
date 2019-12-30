@@ -31,6 +31,10 @@ impl ToBytes for Phase {
 
         Ok(vec![id])
     }
+
+    fn serialized_length(&self) -> usize {
+        PHASE_SERIALIZED_LENGTH
+    }
 }
 
 impl FromBytes for Phase {

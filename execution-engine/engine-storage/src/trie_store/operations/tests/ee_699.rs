@@ -1,7 +1,7 @@
 use proptest::{arbitrary, array, collection, prop_oneof, strategy::Strategy};
 
 use contract_ffi::{
-    bytesrepr::{self, FromBytes, ToBytes},
+    bytesrepr::{self, FromBytes, ToBytes, U8_SERIALIZED_LENGTH},
     gens,
     key::LOCAL_SEED_LENGTH,
     uref::URef,
@@ -100,6 +100,16 @@ impl ToBytes for PublicKey {
         };
         Ok(ret)
     }
+
+    fn serialized_length(&self) -> usize {
+        U8_SERIALIZED_LENGTH
+            + match self {
+                PublicKey::Basic(key) => key.serialized_length(),
+                PublicKey::Similar(key) => key.serialized_length(),
+                PublicKey::Fancy(key) => key.serialized_length(),
+                PublicKey::Long(key) => key.serialized_length(),
+            }
+    }
 }
 
 impl FromBytes for PublicKey {
@@ -175,6 +185,16 @@ impl ToBytes for TestKey {
             }
         }
         Ok(ret)
+    }
+
+    fn serialized_length(&self) -> usize {
+        U8_SERIALIZED_LENGTH
+            + match self {
+                TestKey::Account(public_key) => public_key.serialized_length(),
+                TestKey::Hash(hash) => hash.serialized_length(),
+                TestKey::URef(uref) => uref.serialized_length(),
+                TestKey::Local(local) => local.serialized_length(),
+            }
     }
 }
 

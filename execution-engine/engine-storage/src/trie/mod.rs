@@ -1,9 +1,9 @@
 //! Core types for a Merkle Trie
 
-use std::{mem::size_of, ops::Deref};
+use std::ops::Deref;
 
-use contract_ffi::bytesrepr::{self, FromBytes, ToBytes};
-use engine_shared::newtypes::Blake2bHash;
+use contract_ffi::bytesrepr::{self, FromBytes, ToBytes, U32_SERIALIZED_LENGTH};
+use engine_shared::newtypes::{Blake2bHash, BLAKE2B_DIGEST_LENGTH};
 
 #[cfg(test)]
 pub mod gens;
@@ -12,8 +12,6 @@ pub mod gens;
 mod tests;
 
 pub const RADIX: usize = 256;
-
-const U32_SERIALIZED_LENGTH: usize = size_of::<u32>();
 
 /// A parent is represented as a pair of a child index and a node or extension.
 pub type Parents<K, V> = Vec<(u8, Trie<K, V>)>;
@@ -55,6 +53,10 @@ impl ToBytes for Pointer {
         ret.append(&mut self.tag().to_bytes()?);
         ret.append(&mut hash_bytes);
         Ok(ret)
+    }
+
+    fn serialized_length(&self) -> usize {
+        U32_SERIALIZED_LENGTH + BLAKE2B_DIGEST_LENGTH
     }
 }
 
@@ -116,7 +118,11 @@ impl Default for PointerBlock {
 
 impl ToBytes for PointerBlock {
     fn to_bytes(&self) -> Result<Vec<u8>, bytesrepr::Error> {
-        ToBytes::to_bytes(&self.0)
+        self.0.to_bytes()
+    }
+
+    fn serialized_length(&self) -> usize {
+        self.0.serialized_length()
     }
 }
 
@@ -286,6 +292,17 @@ where
                 Ok(ret)
             }
         }
+    }
+
+    fn serialized_length(&self) -> usize {
+        U32_SERIALIZED_LENGTH
+            + match self {
+                Trie::Leaf { key, value } => key.serialized_length() + value.serialized_length(),
+                Trie::Node { pointer_block } => pointer_block.serialized_length(),
+                Trie::Extension { affix, pointer } => {
+                    affix.serialized_length() + pointer.serialized_length()
+                }
+            }
     }
 }
 

@@ -96,6 +96,10 @@ impl ToBytes for ActionThresholds {
         result.extend(&self.key_management.to_bytes()?);
         Ok(result)
     }
+
+    fn serialized_length(&self) -> usize {
+        2 * WEIGHT_SERIALIZED_LENGTH
+    }
 }
 
 impl FromBytes for ActionThresholds {

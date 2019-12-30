@@ -7,7 +7,7 @@ use bitflags::bitflags;
 use hex_fmt::HexFmt;
 
 use crate::{
-    bytesrepr::{self, OPTION_TAG_SERIALIZED_LENGTH, U32_SERIALIZED_LENGTH},
+    bytesrepr::{self, OPTION_TAG_SERIALIZED_LENGTH},
     contract_api::TURef,
     value::CLTyped,
 };
@@ -62,6 +62,10 @@ impl core::fmt::Display for AccessRights {
 impl bytesrepr::ToBytes for AccessRights {
     fn to_bytes(&self) -> Result<Vec<u8>, bytesrepr::Error> {
         self.bits.to_bytes()
+    }
+
+    fn serialized_length(&self) -> usize {
+        self.bits.serialized_length()
     }
 }
 
@@ -190,6 +194,10 @@ impl bytesrepr::ToBytes for URef {
         result.append(&mut self.1.to_bytes()?);
         Ok(result)
     }
+
+    fn serialized_length(&self) -> usize {
+        self.0.serialized_length() + self.1.serialized_length()
+    }
 }
 
 impl bytesrepr::FromBytes for URef {
@@ -198,36 +206,6 @@ impl bytesrepr::FromBytes for URef {
         let (maybe_access_rights, rem): (Option<AccessRights>, &[u8]) =
             bytesrepr::FromBytes::from_bytes(rem)?;
         Ok((URef(id, maybe_access_rights), rem))
-    }
-}
-
-impl bytesrepr::FromBytes for Vec<URef> {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), bytesrepr::Error> {
-        let (size, mut stream): (u32, &[u8]) = bytesrepr::FromBytes::from_bytes(bytes)?;
-        let mut result = Vec::new();
-        result.try_reserve_exact(size as usize)?;
-        for _ in 0..size {
-            let (uref, rem): (URef, &[u8]) = bytesrepr::FromBytes::from_bytes(stream)?;
-            result.push(uref);
-            stream = rem;
-        }
-        Ok((result, stream))
-    }
-}
-
-impl bytesrepr::ToBytes for Vec<URef> {
-    fn to_bytes(&self) -> Result<Vec<u8>, bytesrepr::Error> {
-        let size = self.len() as u32;
-        let mut result: Vec<u8> = Vec::with_capacity(U32_SERIALIZED_LENGTH);
-        result.extend(size.to_bytes()?);
-        result.extend(
-            self.iter()
-                .map(bytesrepr::ToBytes::to_bytes)
-                .collect::<Result<Vec<_>, _>>()?
-                .into_iter()
-                .flatten(),
-        );
-        Ok(result)
     }
 }
 

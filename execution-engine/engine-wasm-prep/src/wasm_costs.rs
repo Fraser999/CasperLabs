@@ -66,6 +66,10 @@ impl ToBytes for WasmCosts {
         ret.append(&mut self.opcodes_div.to_bytes()?);
         Ok(ret)
     }
+
+    fn serialized_length(&self) -> usize {
+        WASM_COSTS_SERIALIZED_LENGTH
+    }
 }
 
 impl FromBytes for WasmCosts {

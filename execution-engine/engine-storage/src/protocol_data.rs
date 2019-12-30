@@ -73,6 +73,12 @@ impl ToBytes for ProtocolData {
         ret.append(&mut self.proof_of_stake.to_bytes()?);
         Ok(ret)
     }
+
+    fn serialized_length(&self) -> usize {
+        self.wasm_costs.serialized_length()
+            + self.mint.serialized_length()
+            + self.proof_of_stake.serialized_length()
+    }
 }
 
 impl FromBytes for ProtocolData {

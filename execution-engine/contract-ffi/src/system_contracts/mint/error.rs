@@ -6,7 +6,7 @@ use core::convert::{TryFrom, TryInto};
 use failure::Fail;
 
 use crate::{
-    bytesrepr::{self, FromBytes, ToBytes},
+    bytesrepr::{self, FromBytes, ToBytes, U8_SERIALIZED_LENGTH},
     system_contracts::mint::purse_id::PurseIdError,
     value::{CLType, CLTyped},
 };
@@ -84,6 +84,10 @@ impl ToBytes for Error {
     fn to_bytes(&self) -> Result<Vec<u8>, bytesrepr::Error> {
         let value = *self as u8;
         value.to_bytes()
+    }
+
+    fn serialized_length(&self) -> usize {
+        U8_SERIALIZED_LENGTH
     }
 }
 
