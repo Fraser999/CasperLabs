@@ -11,12 +11,12 @@ use engine_core::{
     runtime_context::RuntimeContext,
 };
 use engine_grpc_server::engine_server::ipc_grpc::ExecutionEngineService;
-use engine_shared::{gas::Gas, newtypes::CorrelationId};
+use engine_shared::newtypes::CorrelationId;
 use engine_storage::{global_state::StateProvider, protocol_data::ProtocolData};
 use engine_wasm_prep::Preprocessor;
 use types::{
     account::PublicKey, bytesrepr::FromBytes, BlockTime, CLTyped, CLValue, Key, Phase,
-    ProtocolVersion, URef, U512,
+    ProtocolVersion, URef,
 };
 
 use crate::internal::{utils, WasmTestBuilder, DEFAULT_WASM_COSTS};
@@ -62,9 +62,9 @@ where
         let address_generator = AddressGenerator::new(&deploy_hash, phase);
         Rc::new(RefCell::new(address_generator))
     };
-    let gas_counter = Gas::default();
+    let gas_counter = 0;
     let fn_store_id = INIT_FN_STORE_ID;
-    let gas_limit = Gas::new(U512::from(std::u64::MAX));
+    let gas_limit = std::u64::MAX;
     let protocol_version = ProtocolVersion::V1_0_0;
     let correlation_id = CorrelationId::new();
     let arguments: Vec<CLValue> = args.parse().expect("should be able to serialize args");

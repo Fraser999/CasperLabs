@@ -91,7 +91,7 @@ impl Executor {
         authorized_keys: BTreeSet<PublicKey>,
         blocktime: BlockTime,
         deploy_hash: [u8; 32],
-        gas_limit: Gas,
+        gas_limit: u64,
         protocol_version: ProtocolVersion,
         correlation_id: CorrelationId,
         tc: Rc<RefCell<TrackingCopy<R>>>,
@@ -118,7 +118,7 @@ impl Executor {
             };
 
         let address_generator = AddressGenerator::new(&deploy_hash, phase);
-        let gas_counter: Gas = Gas::default();
+        let gas_counter = 0;
 
         // Snapshot of effects before execution, so in case of error
         // only nonce update can be returned.
@@ -172,14 +172,14 @@ impl Executor {
                     Ok(_value) => {
                         return ExecutionResult::Success {
                             effect: runtime.context().effect(),
-                            cost: runtime.context().gas_counter(),
+                            cost: Gas::new(runtime.context().gas_counter().into()),
                         }
                     }
                     Err(error) => {
                         return ExecutionResult::Failure {
                             error: error.into(),
                             effect: effects_snapshot,
-                            cost: runtime.context().gas_counter(),
+                            cost: Gas::new(runtime.context().gas_counter().into()),
                         }
                     }
                 }
@@ -193,14 +193,14 @@ impl Executor {
                     Ok(_value) => {
                         return ExecutionResult::Success {
                             effect: runtime.context().effect(),
-                            cost: runtime.context().gas_counter(),
+                            cost: Gas::new(runtime.context().gas_counter().into()),
                         }
                     }
                     Err(error) => {
                         return ExecutionResult::Failure {
                             error: error.into(),
                             effect: effects_snapshot,
-                            cost: runtime.context().gas_counter(),
+                            cost: Gas::new(runtime.context().gas_counter().into()),
                         }
                     }
                 }
@@ -209,13 +209,13 @@ impl Executor {
 
         on_fail_charge!(
             instance.invoke_export("call", &[], &mut runtime),
-            runtime.context().gas_counter(),
+            Gas::new(runtime.context().gas_counter().into()),
             effects_snapshot
         );
 
         ExecutionResult::Success {
             effect: runtime.context().effect(),
-            cost: runtime.context().gas_counter(),
+            cost: Gas::new(runtime.context().gas_counter().into()),
         }
     }
 
@@ -229,7 +229,7 @@ impl Executor {
         authorization_keys: BTreeSet<PublicKey>,
         blocktime: BlockTime,
         deploy_hash: [u8; 32],
-        gas_limit: Gas,
+        gas_limit: u64,
         protocol_version: ProtocolVersion,
         correlation_id: CorrelationId,
         state: Rc<RefCell<TrackingCopy<R>>>,
@@ -259,7 +259,7 @@ impl Executor {
             let address_generator = AddressGenerator::new(&deploy_hash, phase);
             Rc::new(RefCell::new(address_generator))
         };
-        let gas_counter = Gas::default(); // maybe const?
+        let gas_counter = 0;
 
         // Snapshot of effects before execution, so in case of error only nonce update
         // can be returned.
@@ -313,14 +313,14 @@ impl Executor {
                 Ok(_value) => {
                     return ExecutionResult::Success {
                         effect: runtime.context().effect(),
-                        cost: runtime.context().gas_counter(),
+                        cost: Gas::new(runtime.context().gas_counter().into()),
                     }
                 }
                 Err(error) => {
                     return ExecutionResult::Failure {
                         error: error.into(),
                         effect: effects_snapshot,
-                        cost: runtime.context().gas_counter(),
+                        cost: Gas::new(runtime.context().gas_counter().into()),
                     }
                 }
             }
@@ -331,7 +331,7 @@ impl Executor {
             Ok(_) => {
                 return ExecutionResult::Success {
                     effect: runtime.context().effect(),
-                    cost: runtime.context().gas_counter(),
+                    cost: Gas::new(runtime.context().gas_counter().into()),
                 }
             }
         };
@@ -342,14 +342,14 @@ impl Executor {
                 Error::Ret(ref _ret_urefs) => {
                     return ExecutionResult::Success {
                         effect: runtime.context().effect(),
-                        cost: runtime.context().gas_counter(),
+                        cost: Gas::new(runtime.context().gas_counter().into()),
                     };
                 }
                 Error::Revert(status) => {
                     return ExecutionResult::Failure {
                         error: Error::Revert(*status).into(),
                         effect: effects_snapshot,
-                        cost: runtime.context().gas_counter(),
+                        cost: Gas::new(runtime.context().gas_counter().into()),
                     };
                 }
                 _ => {}
@@ -359,7 +359,7 @@ impl Executor {
         ExecutionResult::Failure {
             error: Error::Interpreter(error).into(),
             effect: effects_snapshot,
-            cost: runtime.context().gas_counter(),
+            cost: Gas::new(runtime.context().gas_counter().into()),
         }
     }
 
@@ -373,7 +373,7 @@ impl Executor {
         authorization_keys: BTreeSet<PublicKey>,
         blocktime: BlockTime,
         deploy_hash: [u8; 32],
-        gas_limit: Gas,
+        gas_limit: u64,
         address_generator: Rc<RefCell<AddressGenerator>>,
         protocol_version: ProtocolVersion,
         correlation_id: CorrelationId,
@@ -401,7 +401,7 @@ impl Executor {
             bytesrepr::deserialize(args)?
         };
 
-        let gas_counter = Gas::default();
+        let gas_counter = u64::default();
 
         let runtime_context = RuntimeContext::new(
             state,
@@ -446,7 +446,7 @@ impl Executor {
         authorization_keys: BTreeSet<PublicKey>,
         blocktime: BlockTime,
         deploy_hash: [u8; 32],
-        gas_limit: Gas,
+        gas_limit: u64,
         address_generator: Rc<RefCell<AddressGenerator>>,
         protocol_version: ProtocolVersion,
         correlation_id: CorrelationId,

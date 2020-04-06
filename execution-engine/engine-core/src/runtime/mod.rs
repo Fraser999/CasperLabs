@@ -17,7 +17,7 @@ use wasmi::{ImportsBuilder, MemoryRef, ModuleInstance, ModuleRef, Trap, TrapKind
 
 use ::mint::Mint;
 use contract::args_parser::ArgsParser;
-use engine_shared::{account::Account, contract::Contract, gas::Gas, stored_value::StoredValue};
+use engine_shared::{account::Account, contract::Contract, stored_value::StoredValue};
 use engine_storage::{global_state::StateReader, protocol_data::ProtocolData};
 use proof_of_stake::ProofOfStake;
 use standard_payment::StandardPayment;
@@ -1382,7 +1382,7 @@ where
     /// Returns false if gas limit exceeded and true if not.
     /// Intuition about the return value sense is to answer the question 'are we
     /// allowed to continue?'
-    fn charge_gas(&mut self, amount: Gas) -> bool {
+    fn charge_gas(&mut self, amount: u64) -> bool {
         let prev = self.context.gas_counter();
         match prev.checked_add(amount) {
             // gas charge overflow protection
@@ -1395,7 +1395,7 @@ where
         }
     }
 
-    fn gas(&mut self, amount: Gas) -> Result<(), Trap> {
+    fn gas(&mut self, amount: u64) -> Result<(), Trap> {
         if self.charge_gas(amount) {
             Ok(())
         } else {

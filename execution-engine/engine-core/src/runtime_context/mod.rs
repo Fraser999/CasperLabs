@@ -12,8 +12,7 @@ use blake2::{
 };
 
 use engine_shared::{
-    account::Account, contract::Contract, gas::Gas, newtypes::CorrelationId,
-    stored_value::StoredValue,
+    account::Account, contract::Contract, newtypes::CorrelationId, stored_value::StoredValue,
 };
 use engine_storage::{global_state::StateReader, protocol_data::ProtocolData};
 use types::{
@@ -66,8 +65,8 @@ pub struct RuntimeContext<'a, R> {
     base_key: Key,
     blocktime: BlockTime,
     deploy_hash: [u8; 32],
-    gas_limit: Gas,
-    gas_counter: Gas,
+    gas_limit: u64,
+    gas_counter: u64,
     fn_store_id: u32,
     address_generator: Rc<RefCell<AddressGenerator>>,
     protocol_version: ProtocolVersion,
@@ -92,8 +91,8 @@ where
         base_key: Key,
         blocktime: BlockTime,
         deploy_hash: [u8; 32],
-        gas_limit: Gas,
-        gas_counter: Gas,
+        gas_limit: u64,
+        gas_counter: u64,
         fn_store_id: u32,
         address_generator: Rc<RefCell<AddressGenerator>>,
         protocol_version: ProtocolVersion,
@@ -235,15 +234,15 @@ where
         Rc::clone(&self.state)
     }
 
-    pub fn gas_limit(&self) -> Gas {
+    pub fn gas_limit(&self) -> u64 {
         self.gas_limit
     }
 
-    pub fn gas_counter(&self) -> Gas {
+    pub fn gas_counter(&self) -> u64 {
         self.gas_counter
     }
 
-    pub fn set_gas_counter(&mut self, new_gas_counter: Gas) {
+    pub fn set_gas_counter(&mut self, new_gas_counter: u64) {
         self.gas_counter = new_gas_counter;
     }
 

@@ -18,7 +18,7 @@ use std::{
     rc::Rc,
 };
 
-use num_traits::Zero;
+use num_traits::{AsPrimitive, Zero};
 use parity_wasm::elements::Module;
 
 use contract::args_parser::ArgsParser;
@@ -132,7 +132,7 @@ where
         // Preliminaries
         let executor = Executor::new(self.config);
         let blocktime = BlockTime::new(GENESIS_INITIAL_BLOCKTIME);
-        let gas_limit = Gas::new(std::u64::MAX.into());
+        let gas_limit = std::u64::MAX;
         let phase = Phase::System;
 
         let initial_base_key = Key::Account(SYSTEM_ACCOUNT_ADDR);
@@ -738,7 +738,7 @@ where
                 };
 
                 // upgrade has no gas limit; approximating with MAX
-                let gas_limit = Gas::new(std::u64::MAX.into());
+                let gas_limit = std::u64::MAX;
                 let phase = Phase::System;
                 let address_generator = {
                     let generator = AddressGenerator::new(&pre_state_hash.value(), phase);
@@ -1188,7 +1188,10 @@ where
         let payment_result = {
             // payment_code_spec_1: init pay environment w/ gas limit == (max_payment_cost /
             // conv_rate)
-            let pay_gas_limit = Gas::from_motes(max_payment_cost, CONV_RATE).unwrap_or_default();
+            let pay_gas_limit = Gas::from_motes(max_payment_cost, CONV_RATE)
+                .unwrap_or_default()
+                .value()
+                .as_();
 
             let module_bytes_is_empty = match payment {
                 ExecutableDeployItem::ModuleBytes {
@@ -1272,12 +1275,12 @@ where
                 match runtime.call_host_standard_payment() {
                     Ok(()) => ExecutionResult::Success {
                         effect: runtime.context().effect(),
-                        cost: runtime.context().gas_counter(),
+                        cost: Gas::new(runtime.context().gas_counter().into()),
                     },
                     Err(error) => ExecutionResult::Failure {
                         error: error.into(),
                         effect: effects_snapshot,
-                        cost: runtime.context().gas_counter(),
+                        cost: Gas::new(runtime.context().gas_counter().into()),
                     },
                 }
             } else {
@@ -1360,9 +1363,11 @@ where
             // payment code execution) * conv_rate, yes session
             // session_code_spec_1: gas limit = ((balance of PoS payment purse) / conv_rate)
             // - (gas spent during payment execution)
-            let session_gas_limit: Gas = Gas::from_motes(payment_purse_balance, CONV_RATE)
+            let session_gas_limit = (Gas::from_motes(payment_purse_balance, CONV_RATE)
                 .unwrap_or_default()
-                - payment_result_cost;
+                - payment_result_cost)
+                .value()
+                .as_();
             let system_contract_cache = SystemContractCache::clone(&self.system_contract_cache);
 
             executor.exec(
@@ -1441,7 +1446,7 @@ where
             let mut proof_of_stake_keys = proof_of_stake_contract.named_keys().to_owned();
 
             let base_key = Key::from(proof_of_stake_reference);
-            let gas_limit = Gas::new(U512::from(std::u64::MAX));
+            let gas_limit = std::u64::MAX;
             let system_contract_cache = SystemContractCache::clone(&self.system_contract_cache);
 
             executor.exec_finalize(
