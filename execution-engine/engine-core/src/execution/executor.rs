@@ -118,7 +118,7 @@ impl Executor {
             };
 
         let address_generator = AddressGenerator::new(&deploy_hash, phase);
-        let gas_counter: Gas = Gas::default();
+        let initial_gas_count = Gas::default();
 
         // Snapshot of effects before execution, so in case of error
         // only nonce update can be returned.
@@ -144,7 +144,7 @@ impl Executor {
             blocktime,
             deploy_hash,
             gas_limit,
-            gas_counter,
+            initial_gas_count,
             FN_STORE_ID_INITIAL,
             Rc::new(RefCell::new(address_generator)),
             protocol_version,
@@ -172,14 +172,14 @@ impl Executor {
                     Ok(_value) => {
                         return ExecutionResult::Success {
                             effect: runtime.context().effect(),
-                            cost: runtime.context().gas_counter(),
+                            cost: runtime.context().gas_used(),
                         }
                     }
                     Err(error) => {
                         return ExecutionResult::Failure {
                             error: error.into(),
                             effect: effects_snapshot,
-                            cost: runtime.context().gas_counter(),
+                            cost: runtime.context().gas_used(),
                         }
                     }
                 }
@@ -193,14 +193,14 @@ impl Executor {
                     Ok(_value) => {
                         return ExecutionResult::Success {
                             effect: runtime.context().effect(),
-                            cost: runtime.context().gas_counter(),
+                            cost: runtime.context().gas_used(),
                         }
                     }
                     Err(error) => {
                         return ExecutionResult::Failure {
                             error: error.into(),
                             effect: effects_snapshot,
-                            cost: runtime.context().gas_counter(),
+                            cost: runtime.context().gas_used(),
                         }
                     }
                 }
@@ -209,13 +209,13 @@ impl Executor {
 
         on_fail_charge!(
             instance.invoke_export("call", &[], &mut runtime),
-            runtime.context().gas_counter(),
+            runtime.context().gas_used(),
             effects_snapshot
         );
 
         ExecutionResult::Success {
             effect: runtime.context().effect(),
-            cost: runtime.context().gas_counter(),
+            cost: runtime.context().gas_used(),
         }
     }
 
@@ -259,7 +259,7 @@ impl Executor {
             let address_generator = AddressGenerator::new(&deploy_hash, phase);
             Rc::new(RefCell::new(address_generator))
         };
-        let gas_counter = Gas::default(); // maybe const?
+        let initial_gas_count = Gas::default(); // maybe const?
 
         // Snapshot of effects before execution, so in case of error only nonce update
         // can be returned.
@@ -283,7 +283,7 @@ impl Executor {
             blocktime,
             deploy_hash,
             gas_limit,
-            gas_counter,
+            initial_gas_count,
             FN_STORE_ID_INITIAL,
             address_generator,
             protocol_version,
@@ -313,14 +313,14 @@ impl Executor {
                 Ok(_value) => {
                     return ExecutionResult::Success {
                         effect: runtime.context().effect(),
-                        cost: runtime.context().gas_counter(),
+                        cost: runtime.context().gas_used(),
                     }
                 }
                 Err(error) => {
                     return ExecutionResult::Failure {
                         error: error.into(),
                         effect: effects_snapshot,
-                        cost: runtime.context().gas_counter(),
+                        cost: runtime.context().gas_used(),
                     }
                 }
             }
@@ -331,7 +331,7 @@ impl Executor {
             Ok(_) => {
                 return ExecutionResult::Success {
                     effect: runtime.context().effect(),
-                    cost: runtime.context().gas_counter(),
+                    cost: runtime.context().gas_used(),
                 }
             }
         };
@@ -342,21 +342,21 @@ impl Executor {
                 Error::Ret(ref _ret_urefs) => {
                     return ExecutionResult::Success {
                         effect: runtime.context().effect(),
-                        cost: runtime.context().gas_counter(),
+                        cost: runtime.context().gas_used(),
                     };
                 }
                 Error::Revert(status) => {
                     return ExecutionResult::Failure {
                         error: Error::Revert(*status).into(),
                         effect: effects_snapshot,
-                        cost: runtime.context().gas_counter(),
+                        cost: runtime.context().gas_used(),
                     };
                 }
                 error => {
                     return ExecutionResult::Failure {
                         error: error.clone().into(),
                         effect: effects_snapshot,
-                        cost: runtime.context().gas_counter(),
+                        cost: runtime.context().gas_used(),
                     }
                 }
             }
@@ -365,7 +365,7 @@ impl Executor {
         ExecutionResult::Failure {
             error: Error::Interpreter(error.into()).into(),
             effect: effects_snapshot,
-            cost: runtime.context().gas_counter(),
+            cost: runtime.context().gas_used(),
         }
     }
 
@@ -407,7 +407,7 @@ impl Executor {
             bytesrepr::deserialize(args)?
         };
 
-        let gas_counter = Gas::default();
+        let initial_gas_count = Gas::default();
 
         let runtime_context = RuntimeContext::new(
             state,
@@ -420,7 +420,7 @@ impl Executor {
             blocktime,
             deploy_hash,
             gas_limit,
-            gas_counter,
+            initial_gas_count,
             FN_STORE_ID_INITIAL,
             address_generator,
             protocol_version,

@@ -1172,12 +1172,12 @@ where
                 match runtime.call_host_standard_payment() {
                     Ok(()) => ExecutionResult::Success {
                         effect: runtime.context().effect(),
-                        cost: runtime.context().gas_counter(),
+                        cost: runtime.context().gas_used(),
                     },
                     Err(error) => ExecutionResult::Failure {
                         error: error.into(),
                         effect: effects_snapshot,
-                        cost: runtime.context().gas_counter(),
+                        cost: runtime.context().gas_used(),
                     },
                 }
             } else {

@@ -1,3 +1,5 @@
+mod gas_counter;
+
 use std::{
     cell::RefCell,
     collections::{BTreeMap, BTreeSet, HashMap, HashSet},
@@ -32,6 +34,7 @@ use crate::{
     tracking_copy::{AddResult, TrackingCopy},
     Address,
 };
+use gas_counter::GasCounter;
 
 #[cfg(test)]
 mod tests;
@@ -66,8 +69,7 @@ pub struct RuntimeContext<'a, R> {
     base_key: Key,
     blocktime: BlockTime,
     deploy_hash: [u8; 32],
-    gas_limit: Gas,
-    gas_counter: Gas,
+    gas_counter: GasCounter,
     fn_store_id: u32,
     address_generator: Rc<RefCell<AddressGenerator>>,
     protocol_version: ProtocolVersion,
@@ -93,7 +95,7 @@ where
         blocktime: BlockTime,
         deploy_hash: [u8; 32],
         gas_limit: Gas,
-        gas_counter: Gas,
+        gas_count: Gas,
         fn_store_id: u32,
         address_generator: Rc<RefCell<AddressGenerator>>,
         protocol_version: ProtocolVersion,
@@ -101,6 +103,7 @@ where
         phase: Phase,
         protocol_data: ProtocolData,
     ) -> Self {
+        let gas_counter = GasCounter::new(gas_limit, gas_count);
         RuntimeContext {
             state,
             named_keys,
@@ -111,7 +114,6 @@ where
             blocktime,
             deploy_hash,
             base_key,
-            gas_limit,
             gas_counter,
             fn_store_id,
             address_generator,
@@ -236,15 +238,19 @@ where
     }
 
     pub fn gas_limit(&self) -> Gas {
-        self.gas_limit
+        self.gas_counter.limit()
     }
 
-    pub fn gas_counter(&self) -> Gas {
-        self.gas_counter
+    pub fn gas_used(&self) -> Gas {
+        self.gas_counter.used()
     }
 
-    pub fn set_gas_counter(&mut self, new_gas_counter: Gas) {
-        self.gas_counter = new_gas_counter;
+    pub fn use_gas(&mut self, amount: u64) -> Result<(), Error> {
+        self.gas_counter.add(amount).map_err(|_| Error::GasLimit)
+    }
+
+    pub fn set_gas_used(&mut self, amount: Gas) {
+        self.gas_counter.set_gas_used(amount)
     }
 
     pub fn inc_fn_store_id(&mut self) {

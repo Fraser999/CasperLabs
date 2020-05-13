@@ -9,7 +9,7 @@ use types::{
     Key, TransferredTo, U512,
 };
 
-use engine_shared::{gas::Gas, stored_value::StoredValue};
+use engine_shared::stored_value::StoredValue;
 use engine_storage::global_state::StateReader;
 
 use super::{args::Args, scoped_instrumenter::ScopedInstrumenter, Error, Runtime};
@@ -232,7 +232,7 @@ where
 
             FunctionIndex::GasFuncIndex => {
                 let gas_arg: u32 = Args::parse(args)?;
-                self.gas(Gas::new(gas_arg.into()))?;
+                self.gas(u64::from(gas_arg))?;
                 Ok(None)
             }
 

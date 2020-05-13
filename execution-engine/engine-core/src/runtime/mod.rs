@@ -18,7 +18,7 @@ use wasmi::{ImportsBuilder, MemoryRef, ModuleInstance, ModuleRef, Trap, TrapKind
 
 use ::mint::Mint;
 use contract::args_parser::ArgsParser;
-use engine_shared::{account::Account, contract::Contract, gas::Gas, stored_value::StoredValue};
+use engine_shared::{account::Account, contract::Contract, stored_value::StoredValue};
 use engine_storage::{global_state::StateReader, protocol_data::ProtocolData};
 use proof_of_stake::ProofOfStake;
 use standard_payment::StandardPayment;
@@ -1379,30 +1379,8 @@ where
         self.context.protocol_data()
     }
 
-    /// Charge specified amount of gas
-    ///
-    /// Returns false if gas limit exceeded and true if not.
-    /// Intuition about the return value sense is to answer the question 'are we
-    /// allowed to continue?'
-    fn charge_gas(&mut self, amount: Gas) -> bool {
-        let prev = self.context.gas_counter();
-        match prev.checked_add(amount) {
-            // gas charge overflow protection
-            None => false,
-            Some(val) if val > self.context.gas_limit() => false,
-            Some(val) => {
-                self.context.set_gas_counter(val);
-                true
-            }
-        }
-    }
-
-    fn gas(&mut self, amount: Gas) -> Result<(), Trap> {
-        if self.charge_gas(amount) {
-            Ok(())
-        } else {
-            Err(Error::GasLimit.into())
-        }
+    fn gas(&mut self, amount: u64) -> Result<(), Trap> {
+        self.context.use_gas(amount).map_err(Into::into)
     }
 
     fn bytes_from_mem(&self, ptr: u32, size: usize) -> Result<Vec<u8>, Error> {
@@ -1724,7 +1702,7 @@ where
         let blocktime = self.context.get_blocktime();
         let deploy_hash = self.context.get_deployhash();
         let gas_limit = self.context.gas_limit();
-        let gas_counter = self.context.gas_counter();
+        let initial_gas_count = self.context.gas_used();
         let fn_store_id = self.context.fn_store_id();
         let address_generator = self.context.address_generator();
         let correlation_id = self.context.correlation_id();
@@ -1742,7 +1720,7 @@ where
             blocktime,
             deploy_hash,
             gas_limit,
-            gas_counter,
+            initial_gas_count,
             fn_store_id,
             address_generator,
             protocol_version,
@@ -1816,7 +1794,7 @@ where
         let blocktime = self.context.get_blocktime();
         let deploy_hash = self.context.get_deployhash();
         let gas_limit = self.context.gas_limit();
-        let gas_counter = self.context.gas_counter();
+        let initial_gas_count = self.context.gas_used();
         let fn_store_id = self.context.fn_store_id();
         let address_generator = self.context.address_generator();
         let correlation_id = self.context.correlation_id();
@@ -1834,7 +1812,7 @@ where
             blocktime,
             deploy_hash,
             gas_limit,
-            gas_counter,
+            initial_gas_count,
             fn_store_id,
             address_generator,
             protocol_version,
@@ -2015,7 +1993,7 @@ where
             self.context.get_blocktime(),
             self.context.get_deployhash(),
             self.context.gas_limit(),
-            self.context.gas_counter(),
+            self.context.gas_used(),
             self.context.fn_store_id(),
             self.context.address_generator(),
             contract_version,
@@ -2038,7 +2016,7 @@ where
         // The `runtime`'s context was initialized with our counter from before the call and any gas
         // charged by the sub-call was added to its counter - so let's copy the correct value of the
         // counter from there to our counter
-        self.context.set_gas_counter(runtime.context.gas_counter());
+        self.context.set_gas_used(runtime.context.gas_used());
 
         let error = match result {
             Err(error) => error,

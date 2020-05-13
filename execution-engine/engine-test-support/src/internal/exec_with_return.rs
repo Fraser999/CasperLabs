@@ -62,7 +62,7 @@ where
         let address_generator = AddressGenerator::new(&deploy_hash, phase);
         Rc::new(RefCell::new(address_generator))
     };
-    let gas_counter = Gas::default();
+    let initial_gas_count = Gas::default();
     let fn_store_id = INIT_FN_STORE_ID;
     let gas_limit = Gas::new(U512::from(std::u64::MAX));
     let protocol_version = ProtocolVersion::V1_0_0;
@@ -99,7 +99,7 @@ where
         BlockTime::new(block_time),
         deploy_hash,
         gas_limit,
-        gas_counter,
+        initial_gas_count,
         fn_store_id,
         address_generator,
         protocol_version,
