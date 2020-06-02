@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use engine_wasm_prep::wasm_costs::{WasmCosts, WASM_COSTS_SERIALIZED_LENGTH};
 use types::{
     bytesrepr::{self, FromBytes, ToBytes},
@@ -9,7 +11,7 @@ const PROTOCOL_DATA_SERIALIZED_LENGTH: usize =
 const DEFAULT_UREF_ADDRESS: [u8; 32] = [0; 32];
 
 /// Represents a protocol's data. Intended to be associated with a given protocol version.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ProtocolData {
     wasm_costs: WasmCosts,
     mint: URef,

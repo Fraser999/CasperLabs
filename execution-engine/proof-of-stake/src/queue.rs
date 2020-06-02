@@ -1,15 +1,17 @@
 use alloc::{boxed::Box, vec::Vec};
 use core::result;
 
+use serde::{Deserialize, Serialize};
+
 use types::{
     account::PublicKey,
-    bytesrepr::{self, FromBytes, ToBytes, U64_SERIALIZED_LENGTH},
+    bytesrepr::{self, FromBytes, ToBytes, U32_SERIALIZED_LENGTH},
     system_contract_errors::pos::{Error, Result},
     BlockTime, CLType, CLTyped, U512,
 };
 
 /// A pending entry in the bonding or unbonding queue.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct QueueEntry {
     /// The validator who is bonding or unbonding.
     pub validator: PublicKey,
@@ -67,7 +69,7 @@ impl CLTyped for QueueEntry {
 }
 
 /// A queue of bonding or unbonding requests, sorted by timestamp in ascending order.
-#[derive(Clone, Default, PartialEq)]
+#[derive(Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Queue(pub Vec<QueueEntry>);
 
 impl Queue {
@@ -101,7 +103,7 @@ impl Queue {
 impl ToBytes for Queue {
     fn to_bytes(&self) -> result::Result<Vec<u8>, bytesrepr::Error> {
         let mut bytes = bytesrepr::allocate_buffer(self)?;
-        bytes.append(&mut (self.0.len() as u64).to_bytes()?);
+        bytes.append(&mut (self.0.len() as u32).to_bytes()?);
         for entry in &self.0 {
             bytes.append(&mut entry.to_bytes()?);
         }
@@ -109,13 +111,13 @@ impl ToBytes for Queue {
     }
 
     fn serialized_length(&self) -> usize {
-        U64_SERIALIZED_LENGTH + self.0.iter().map(ToBytes::serialized_length).sum::<usize>()
+        U32_SERIALIZED_LENGTH + self.0.iter().map(ToBytes::serialized_length).sum::<usize>()
     }
 }
 
 impl FromBytes for Queue {
     fn from_bytes(bytes: &[u8]) -> result::Result<(Self, &[u8]), bytesrepr::Error> {
-        let (len, mut bytes) = u64::from_bytes(bytes)?;
+        let (len, mut bytes) = u32::from_bytes(bytes)?;
         let mut queue = Vec::new();
         for _ in 0..len {
             let (entry, rest) = QueueEntry::from_bytes(bytes)?;

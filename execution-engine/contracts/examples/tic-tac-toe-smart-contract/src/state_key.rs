@@ -1,11 +1,19 @@
 use alloc::vec::Vec;
 
+use serde::Serialize;
 use types::{
     account::PublicKey,
     bytesrepr::{self, ToBytes},
 };
 
-pub struct StateKey([u8; 64]);
+mod big_array {
+    use serde_big_array::big_array;
+
+    big_array! { BigArray; }
+}
+
+#[derive(Serialize)]
+pub struct StateKey(#[serde(with = "big_array::BigArray")] [u8; 64]);
 
 impl StateKey {
     pub fn new(x_player: PublicKey, o_player: PublicKey) -> StateKey {

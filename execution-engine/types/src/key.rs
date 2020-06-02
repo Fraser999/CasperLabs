@@ -6,6 +6,7 @@ use blake2::{
     VarBlake2b,
 };
 use hex_fmt::HexFmt;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     account::PublicKey,
@@ -46,7 +47,7 @@ fn hash(bytes: &[u8]) -> [u8; BLAKE2B_DIGEST_LENGTH] {
 /// The type under which data (e.g. [`CLValue`](crate::CLValue)s, smart contracts, user accounts)
 /// are indexed on the network.
 #[repr(C)]
-#[derive(PartialEq, Eq, Clone, Copy, PartialOrd, Ord, Hash)]
+#[derive(PartialEq, Eq, Clone, Copy, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum Key {
     /// A `Key` under which a user account is stored.
     Account(PublicKey),

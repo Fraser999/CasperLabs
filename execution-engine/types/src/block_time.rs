@@ -1,12 +1,14 @@
 use alloc::vec::Vec;
 
+use serde::{Deserialize, Serialize};
+
 use crate::bytesrepr::{Error, FromBytes, ToBytes, U64_SERIALIZED_LENGTH};
 
 /// The number of bytes in a serialized [`BlockTime`].
 pub const BLOCKTIME_SERIALIZED_LENGTH: usize = U64_SERIALIZED_LENGTH;
 
 /// A newtype wrapping a [`u64`] which represents the block time.
-#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, PartialOrd)]
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, PartialOrd, Serialize, Deserialize)]
 pub struct BlockTime(u64);
 
 impl BlockTime {

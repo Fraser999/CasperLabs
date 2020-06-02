@@ -1,5 +1,7 @@
 //! Core types for a Merkle Trie
 
+use serde::{Deserialize, Serialize};
+
 use engine_shared::newtypes::{Blake2bHash, BLAKE2B_DIGEST_LENGTH};
 use types::bytesrepr::{self, FromBytes, ToBytes, U8_SERIALIZED_LENGTH};
 
@@ -15,7 +17,7 @@ pub const RADIX: usize = 256;
 pub type Parents<K, V> = Vec<(u8, Trie<K, V>)>;
 
 /// Represents a pointer to the next object in a Merkle Trie
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Pointer {
     LeafPointer(Blake2bHash),
     NodePointer(Blake2bHash),
@@ -77,9 +79,17 @@ impl FromBytes for Pointer {
     }
 }
 
+// This is inside a private module so that the generated `BigArray` does not form part of this
+// crate's public API, and hence also doesn't appear in the rustdocs.
+mod big_array {
+    use serde_big_array::big_array;
+
+    big_array! { BigArray; }
+}
+
 /// Represents the underlying structure of a node in a Merkle Trie
-#[derive(Copy, Clone)]
-pub struct PointerBlock([Option<Pointer>; RADIX]);
+#[derive(Copy, Clone, Serialize, Deserialize)]
+pub struct PointerBlock(#[serde(with = "big_array::BigArray")] [Option<Pointer>; RADIX]);
 
 impl PointerBlock {
     pub fn new() -> Self {
@@ -204,7 +214,7 @@ impl ::std::fmt::Debug for PointerBlock {
 }
 
 /// Represents a Merkle Trie
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Trie<K, V> {
     Leaf { key: K, value: V },
     Node { pointer_block: Box<PointerBlock> },

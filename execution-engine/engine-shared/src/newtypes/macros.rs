@@ -1,6 +1,7 @@
 #[macro_export]
 macro_rules! make_array_newtype {
     ($name:ident, $ty:ty, $len:expr) => {
+        #[derive(Serialize, Deserialize)]
         pub struct $name([$ty; $len]);
 
         impl $name {

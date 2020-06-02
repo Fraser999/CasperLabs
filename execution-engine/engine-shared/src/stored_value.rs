@@ -1,5 +1,7 @@
 use std::convert::TryFrom;
 
+use serde::{Deserialize, Serialize};
+
 use types::{
     bytesrepr::{self, FromBytes, ToBytes, U8_SERIALIZED_LENGTH},
     CLValue,
@@ -14,7 +16,7 @@ enum Tag {
     Contract = 2,
 }
 
-#[derive(Eq, PartialEq, Clone, Debug)]
+#[derive(Eq, PartialEq, Clone, Debug, Serialize, Deserialize)]
 pub enum StoredValue {
     CLValue(CLValue),
     Account(Account),

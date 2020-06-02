@@ -2,10 +2,11 @@ use alloc::vec::Vec;
 use core::fmt;
 
 use failure::Fail;
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{
     bytesrepr::{self, FromBytes, ToBytes, U32_SERIALIZED_LENGTH},
-    CLType, CLTyped,
+    encoding, CLType, CLTyped,
 };
 
 /// Error while converting a [`CLValue`] into a given type.
@@ -43,10 +44,11 @@ pub enum CLValueError {
 ///
 /// It holds the underlying data as a type-erased, serialized `Vec<u8>` and also holds the
 /// [`CLType`] of the underlying data as a separate member.
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug, Serialize, Deserialize)]
 pub struct CLValue {
-    cl_type: CLType,
+    #[serde(with = "serde_bytes")]
     bytes: Vec<u8>,
+    cl_type: CLType,
 }
 
 impl CLValue {
@@ -60,12 +62,38 @@ impl CLValue {
         })
     }
 
+    /// Constructs a `CLValue` from `t`.
+    pub fn from_t_serde<T: CLTyped + Serialize>(t: T) -> Result<CLValue, CLValueError> {
+        let bytes = encoding::serialize(&t)
+            .map_err(|_| CLValueError::Serialization(bytesrepr::Error::Formatting))?;
+
+        Ok(CLValue {
+            cl_type: T::cl_type(),
+            bytes,
+        })
+    }
+
     /// Consumes and converts `self` back into its underlying type.
     pub fn into_t<T: CLTyped + FromBytes>(self) -> Result<T, CLValueError> {
         let expected = T::cl_type();
 
         if self.cl_type == expected {
             bytesrepr::deserialize(self.bytes).map_err(CLValueError::Serialization)
+        } else {
+            Err(CLValueError::Type(CLTypeMismatch {
+                expected,
+                found: self.cl_type,
+            }))
+        }
+    }
+
+    /// Consumes and converts `self` back into its underlying type.
+    pub fn into_t_serde<T: CLTyped + DeserializeOwned>(self) -> Result<T, CLValueError> {
+        let expected = T::cl_type();
+
+        if self.cl_type == expected {
+            encoding::deserialize(&self.bytes)
+                .map_err(|_| CLValueError::Serialization(bytesrepr::Error::Formatting))
         } else {
             Err(CLValueError::Type(CLTypeMismatch {
                 expected,

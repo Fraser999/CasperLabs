@@ -3,11 +3,15 @@
 use alloc::{boxed::Box, vec::Vec};
 use core::{
     convert::TryFrom,
-    fmt::{Debug, Display, Formatter},
+    fmt::{self, Debug, Display, Formatter},
 };
 
 use failure::Fail;
 use hex_fmt::HexFmt;
+use serde::{
+    de::{Error as SerdeError, Visitor},
+    Deserialize, Deserializer, Serialize, Serializer,
+};
 
 use crate::{
     bytesrepr::{Error, FromBytes, ToBytes, U8_SERIALIZED_LENGTH},
@@ -106,7 +110,7 @@ pub const MAX_ASSOCIATED_KEYS: usize = 10;
 pub const WEIGHT_SERIALIZED_LENGTH: usize = U8_SERIALIZED_LENGTH;
 
 /// The weight attributed to a given [`PublicKey`] in an account's associated keys.
-#[derive(PartialOrd, Ord, PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialOrd, Ord, PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct Weight(u8);
 
 impl Weight {
@@ -200,6 +204,41 @@ impl FromBytes for Ed25519 {
     }
 }
 
+impl Serialize for Ed25519 {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_bytes(self.as_bytes())
+    }
+}
+
+impl<'de> Deserialize<'de> for Ed25519 {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct BytesVisitor;
+
+        impl<'de> Visitor<'de> for BytesVisitor {
+            type Value = &'de [u8];
+
+            fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
+                formatter.write_str("a borrowed byte array")
+            }
+
+            fn visit_borrowed_bytes<E: serde::de::Error>(
+                self,
+                bytes: &'de [u8],
+            ) -> Result<Self::Value, E> {
+                Ok(bytes)
+            }
+        }
+
+        let bytes = deserializer.deserialize_bytes(BytesVisitor)?;
+        if bytes.len() != ED25519_LENGTH {
+            return Err(SerdeError::invalid_length(bytes.len(), &"32"));
+        }
+        let mut array = [0; ED25519_LENGTH];
+        array.copy_from_slice(bytes);
+        Ok(Ed25519::new(array))
+    }
+}
+
 /// An enum of supported public key types.
 #[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum PublicKey {
@@ -277,6 +316,22 @@ impl FromBytes for PublicKey {
     fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), Error> {
         let (ed25519, rem) = Ed25519::from_bytes(bytes)?;
         Ok((PublicKey::from(ed25519), rem))
+    }
+}
+
+// TODO: This should just be derived once we're handling more than a single variant.  For now, we
+//       just serialize as if it weren't an enum.
+impl Serialize for PublicKey {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let PublicKey::Ed25519(ed25519) = self;
+        ed25519.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for PublicKey {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let ed25519 = Ed25519::deserialize(deserializer)?;
+        Ok(PublicKey::Ed25519(ed25519))
     }
 }
 

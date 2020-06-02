@@ -31,6 +31,7 @@ pub mod bytesrepr;
 mod cl_type;
 mod cl_value;
 mod contract_ref;
+pub mod encoding;
 #[cfg(any(feature = "gens", test))]
 pub mod gens;
 mod key;

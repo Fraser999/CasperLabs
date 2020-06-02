@@ -1,6 +1,10 @@
 use alloc::vec::Vec;
 
 use bitflags::bitflags;
+use serde::{
+    de::{Error, Unexpected},
+    Deserialize, Deserializer, Serialize, Serializer,
+};
 
 use crate::bytesrepr;
 
@@ -50,6 +54,24 @@ impl AccessRights {
     /// Returns `true` if no flags are set.
     pub fn is_none(self) -> bool {
         self == AccessRights::NONE
+    }
+}
+
+impl Serialize for AccessRights {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_u8(self.bits)
+    }
+}
+
+impl<'de> Deserialize<'de> for AccessRights {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = u8::deserialize(deserializer)?;
+        AccessRights::from_bits(value).ok_or_else(|| {
+            D::Error::invalid_value(
+                Unexpected::Unsigned(value as u64),
+                &"valid access rights value",
+            )
+        })
     }
 }
 

@@ -5,6 +5,7 @@ use core::{
 };
 
 use hex_fmt::HexFmt;
+use serde::{Deserialize, Serialize};
 
 use crate::{bytesrepr, AccessRights, ApiError, Key, ACCESS_RIGHTS_SERIALIZED_LENGTH};
 
@@ -18,7 +19,7 @@ pub const UREF_SERIALIZED_LENGTH: usize = UREF_ADDR_LENGTH + ACCESS_RIGHTS_SERIA
 /// the [`AccessRights`] of the reference.
 ///
 /// A `URef` can be used to index entities such as [`CLValue`](crate::CLValue)s, or smart contracts.
-#[derive(Copy, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Copy, Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct URef([u8; UREF_ADDR_LENGTH], AccessRights);
 
 impl URef {

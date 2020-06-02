@@ -8,6 +8,7 @@ mod write;
 use std::{collections::HashMap, convert};
 
 use lmdb::DatabaseFlags;
+use serde::{Deserialize, Serialize};
 use tempfile::{tempdir, TempDir};
 
 use engine_shared::newtypes::{Blake2bHash, CorrelationId};
@@ -33,7 +34,7 @@ use crate::{
 const TEST_KEY_LENGTH: usize = 7;
 
 /// A short key type for tests.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 struct TestKey([u8; TEST_KEY_LENGTH]);
 
 impl ToBytes for TestKey {
@@ -58,7 +59,7 @@ impl FromBytes for TestKey {
 const TEST_VAL_LENGTH: usize = 6;
 
 /// A short value type for tests.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 struct TestValue([u8; TEST_VAL_LENGTH]);
 
 impl ToBytes for TestValue {

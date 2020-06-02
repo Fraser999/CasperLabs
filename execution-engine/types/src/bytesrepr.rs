@@ -13,6 +13,9 @@ use core::mem::{self, MaybeUninit};
 use core::ptr::NonNull;
 
 use failure::Fail;
+use serde::{de::DeserializeOwned, Serialize};
+
+use crate::encoding;
 
 /// The number of bytes in a serialized `()`.
 pub const UNIT_SERIALIZED_LENGTH: usize = 0;
@@ -681,8 +684,8 @@ impl<T: ToBytes, E: ToBytes> ToBytes for Result<T, E> {
     fn to_bytes(&self) -> Result<Vec<u8>, Error> {
         let mut result = allocate_buffer(self)?;
         let (variant, mut value) = match self {
-            Err(error) => (0, error.to_bytes()?),
-            Ok(result) => (1, result.to_bytes()?),
+            Ok(result) => (0, result.to_bytes()?),
+            Err(error) => (1, error.to_bytes()?),
         };
         result.push(variant);
         result.append(&mut value);
@@ -703,12 +706,12 @@ impl<T: FromBytes, E: FromBytes> FromBytes for Result<T, E> {
         let (variant, rem) = u8::from_bytes(bytes)?;
         match variant {
             0 => {
-                let (value, rem) = E::from_bytes(rem)?;
-                Ok((Err(value), rem))
-            }
-            1 => {
                 let (value, rem) = T::from_bytes(rem)?;
                 Ok((Ok(value), rem))
+            }
+            1 => {
+                let (value, rem) = E::from_bytes(rem)?;
+                Ok((Err(value), rem))
             }
             _ => Err(Error::Formatting),
         }
@@ -804,9 +807,15 @@ impl ToBytes for &str {
 /// Returns `true` if a we can serialize and then deserialize a value
 pub fn test_serialization_roundtrip<T>(t: &T)
 where
-    T: ToBytes + FromBytes + PartialEq,
+    T: ToBytes + FromBytes + PartialEq + Serialize + DeserializeOwned,
 {
     let serialized = ToBytes::to_bytes(t).expect("Unable to serialize data");
+    let serde_serialized = encoding::serialize(t).expect("Unable to serialize data");
+    assert_eq!(
+        serialized.len(),
+        encoding::serialized_length(t).unwrap() as usize
+    );
+    assert_eq!(serialized, serde_serialized);
     assert_eq!(
         serialized.len(),
         t.serialized_length(),
@@ -816,7 +825,9 @@ where
         serialized
     );
     let deserialized = deserialize::<T>(serialized).expect("Unable to deserialize data");
-    assert!(*t == deserialized)
+    let serde_deserialized = encoding::deserialize(&serde_serialized).unwrap();
+    assert!(*t == deserialized);
+    assert!(*t == serde_deserialized);
 }
 
 #[cfg(test)]

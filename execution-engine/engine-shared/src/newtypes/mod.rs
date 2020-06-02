@@ -8,7 +8,7 @@ use blake2::{
     digest::{Input, VariableOutput},
     VarBlake2b,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use types::bytesrepr::{self, FromBytes, ToBytes};
@@ -16,7 +16,7 @@ use types::bytesrepr::{self, FromBytes, ToBytes};
 pub use types::BLAKE2B_DIGEST_LENGTH;
 
 /// Represents a 32-byte BLAKE2b hash digest
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Blake2bHash([u8; BLAKE2B_DIGEST_LENGTH]);
 
 impl Blake2bHash {

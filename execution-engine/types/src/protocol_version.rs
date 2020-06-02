@@ -1,13 +1,17 @@
 use alloc::vec::Vec;
 use core::fmt;
 
+use serde::{Deserialize, Serialize};
+
 use crate::{
     bytesrepr::{Error, FromBytes, ToBytes},
     SemVer,
 };
 
 /// A newtype wrapping a [`SemVer`] which represents a CasperLabs Platform protocol version.
-#[derive(Copy, Clone, Debug, Default, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(
+    Copy, Clone, Debug, Default, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize,
+)]
 pub struct ProtocolVersion(SemVer);
 
 /// The result of [`ProtocolVersion::check_next_version`].

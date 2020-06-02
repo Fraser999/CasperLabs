@@ -1,21 +1,22 @@
 use alloc::vec::Vec;
-use core::convert::TryInto;
 
 use contract::{contract_api::storage, unwrap_or_revert::UnwrapOrRevert};
 use num_traits::{FromPrimitive, ToPrimitive};
 
+use serde::{Deserialize, Serialize};
 use tic_tac_toe_logic::player::Player;
 use types::{
-    account::PublicKey,
-    bytesrepr::{self, FromBytes, ToBytes},
-    AccessRights, CLType, CLTyped, URef,
+    account::{PublicKey, ED25519_SERIALIZED_LENGTH},
+    bytesrepr::{self, FromBytes, ToBytes, U8_SERIALIZED_LENGTH},
+    CLType, CLTyped, URef, UREF_SERIALIZED_LENGTH,
 };
 
 use crate::error::Error;
 
-const PLAYER_DATA_BYTES_SIZE: usize = 1 + 32 + 32;
+const PLAYER_DATA_BYTES_SIZE: usize =
+    U8_SERIALIZED_LENGTH + ED25519_SERIALIZED_LENGTH + UREF_SERIALIZED_LENGTH;
 
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone, Serialize, Deserialize)]
 pub struct PlayerData {
     piece: Player,
     opponent: PublicKey,
@@ -60,14 +61,8 @@ impl ToBytes for PlayerData {
     fn to_bytes(&self) -> Result<Vec<u8>, bytesrepr::Error> {
         let mut result = Vec::with_capacity(PLAYER_DATA_BYTES_SIZE);
         result.push(self.piece.to_u8().unwrap());
-        for byte in self
-            .opponent
-            .as_bytes()
-            .iter()
-            .chain(self.status_key.addr().iter())
-        {
-            result.push(*byte);
-        }
+        result.append(&mut self.opponent.to_bytes()?);
+        result.append(&mut self.status_key.to_bytes()?);
 
         Ok(result)
     }
@@ -79,22 +74,17 @@ impl ToBytes for PlayerData {
 
 impl FromBytes for PlayerData {
     fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), bytesrepr::Error> {
-        let piece = FromPrimitive::from_u8(bytes[0]).ok_or(bytesrepr::Error::EarlyEndOfStream)?;
-        let opponent_key: [u8; 32] = bytes[1..33]
-            .try_into()
-            .map_err(|_| bytesrepr::Error::Formatting)?;
-        let status_key: [u8; 32] = bytes[33..]
-            .try_into()
-            .map_err(|_| bytesrepr::Error::Formatting)?;
-        let opponent = PublicKey::ed25519_from(opponent_key);
-        let status_key = URef::new(status_key, AccessRights::READ_ADD_WRITE);
+        let (piece, remainder) = u8::from_bytes(bytes)?;
+        let (opponent, remainder) = PublicKey::from_bytes(remainder)?;
+        let (status_key, remainder) = URef::from_bytes(remainder)?;
+        let piece = FromPrimitive::from_u8(piece).ok_or(bytesrepr::Error::Formatting)?;
         Ok((
             PlayerData {
                 piece,
                 opponent,
                 status_key,
             },
-            &[],
+            remainder,
         ))
     }
 }

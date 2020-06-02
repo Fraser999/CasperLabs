@@ -3,6 +3,8 @@ mod associated_keys;
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use serde::{Deserialize, Serialize};
+
 use types::{
     account::{
         ActionType, AddKeyFailure, PublicKey, RemoveKeyFailure, SetThresholdFailure,
@@ -15,7 +17,7 @@ use types::{
 pub use action_thresholds::ActionThresholds;
 pub use associated_keys::AssociatedKeys;
 
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug, Serialize, Deserialize)]
 pub struct Account {
     public_key: PublicKey,
     named_keys: BTreeMap<String, Key>,

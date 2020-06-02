@@ -1,11 +1,13 @@
 use std::collections::BTreeMap;
 
+use serde::{Deserialize, Serialize};
+
 use types::{
     bytesrepr::{self, Error, FromBytes, ToBytes},
     Key, ProtocolVersion,
 };
 
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug, Serialize, Deserialize)]
 pub struct Contract {
     bytes: Vec<u8>,
     named_keys: BTreeMap<String, Key>,

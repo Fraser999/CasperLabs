@@ -5,6 +5,10 @@ use alloc::vec::Vec;
 
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::{FromPrimitive, ToPrimitive};
+use serde::{
+    de::{Error as SerdeError, Unexpected},
+    Deserialize, Deserializer, Serialize, Serializer,
+};
 
 use crate::{
     bytesrepr::{Error, FromBytes, ToBytes},
@@ -45,6 +49,21 @@ impl FromBytes for Phase {
         let (id, rest) = u8::from_bytes(bytes)?;
         let phase = FromPrimitive::from_u8(id).ok_or(Error::Formatting)?;
         Ok((phase, rest))
+    }
+}
+
+impl Serialize for Phase {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_u8(self.to_u8().expect("Phase is represented as a u8"))
+    }
+}
+
+impl<'de> Deserialize<'de> for Phase {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = u8::deserialize(deserializer)?;
+        FromPrimitive::from_u8(value).ok_or_else(|| {
+            D::Error::invalid_value(Unexpected::Unsigned(value as u64), &"valid phase value")
+        })
     }
 }
 
