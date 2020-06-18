@@ -20,7 +20,7 @@ use engine_shared::{
     TypeMismatch,
 };
 use engine_storage::global_state::StateReader;
-use types::{bytesrepr, CLType, CLValueError, Key};
+use types::{encoding, CLType, CLValueError, Key};
 
 use crate::engine_state::{execution_effect::ExecutionEffect, op::Op};
 
@@ -161,13 +161,13 @@ pub enum AddResult {
     Success,
     KeyNotFound(Key),
     TypeMismatch(TypeMismatch),
-    Serialization(bytesrepr::Error),
+    Encoding(encoding::Error),
 }
 
 impl From<CLValueError> for AddResult {
     fn from(error: CLValueError) -> Self {
         match error {
-            CLValueError::Serialization(error) => AddResult::Serialization(error),
+            CLValueError::Serialization(error) => AddResult::Encoding(error),
             CLValueError::Type(type_mismatch) => {
                 let expected = format!("{:?}", type_mismatch.expected);
                 let found = format!("{:?}", type_mismatch.found);
@@ -320,7 +320,7 @@ impl<R: StateReader<Key, StoredValue>> TrackingCopy<R> {
             Err(transform::Error::TypeMismatch(type_mismatch)) => {
                 Ok(AddResult::TypeMismatch(type_mismatch))
             }
-            Err(transform::Error::Serialization(error)) => Ok(AddResult::Serialization(error)),
+            Err(transform::Error::Serialization(error)) => Ok(AddResult::Encoding(error)),
         }
     }
 

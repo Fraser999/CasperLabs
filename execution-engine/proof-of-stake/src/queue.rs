@@ -1,11 +1,9 @@
 use alloc::{boxed::Box, vec::Vec};
-use core::result;
 
 use serde::{Deserialize, Serialize};
 
 use types::{
     account::PublicKey,
-    bytesrepr::{self, FromBytes, ToBytes, U32_SERIALIZED_LENGTH},
     system_contract_errors::pos::{Error, Result},
     BlockTime, CLType, CLTyped, U512,
 };
@@ -29,36 +27,6 @@ impl QueueEntry {
             amount,
             timestamp,
         }
-    }
-}
-
-impl ToBytes for QueueEntry {
-    fn to_bytes(&self) -> result::Result<Vec<u8>, bytesrepr::Error> {
-        let mut bytes = bytesrepr::allocate_buffer(self)?;
-        bytes.append(&mut self.validator.to_bytes()?);
-        bytes.append(&mut self.amount.to_bytes()?);
-        bytes.append(&mut self.timestamp.to_bytes()?);
-        Ok(bytes)
-    }
-
-    fn serialized_length(&self) -> usize {
-        self.validator.serialized_length()
-            + self.amount.serialized_length()
-            + self.timestamp.serialized_length()
-    }
-}
-
-impl FromBytes for QueueEntry {
-    fn from_bytes(bytes: &[u8]) -> result::Result<(Self, &[u8]), bytesrepr::Error> {
-        let (validator, bytes) = PublicKey::from_bytes(bytes)?;
-        let (amount, bytes) = U512::from_bytes(bytes)?;
-        let (timestamp, bytes) = BlockTime::from_bytes(bytes)?;
-        let entry = QueueEntry {
-            validator,
-            amount,
-            timestamp,
-        };
-        Ok((entry, bytes))
     }
 }
 
@@ -100,34 +68,6 @@ impl Queue {
     }
 }
 
-impl ToBytes for Queue {
-    fn to_bytes(&self) -> result::Result<Vec<u8>, bytesrepr::Error> {
-        let mut bytes = bytesrepr::allocate_buffer(self)?;
-        bytes.append(&mut (self.0.len() as u32).to_bytes()?);
-        for entry in &self.0 {
-            bytes.append(&mut entry.to_bytes()?);
-        }
-        Ok(bytes)
-    }
-
-    fn serialized_length(&self) -> usize {
-        U32_SERIALIZED_LENGTH + self.0.iter().map(ToBytes::serialized_length).sum::<usize>()
-    }
-}
-
-impl FromBytes for Queue {
-    fn from_bytes(bytes: &[u8]) -> result::Result<(Self, &[u8]), bytesrepr::Error> {
-        let (len, mut bytes) = u32::from_bytes(bytes)?;
-        let mut queue = Vec::new();
-        for _ in 0..len {
-            let (entry, rest) = QueueEntry::from_bytes(bytes)?;
-            bytes = rest;
-            queue.push(entry);
-        }
-        Ok((Queue(queue), bytes))
-    }
-}
-
 impl CLTyped for Queue {
     fn cl_type() -> CLType {
         CLType::List(Box::new(QueueEntry::cl_type()))
@@ -139,7 +79,7 @@ mod tests {
     use alloc::vec;
 
     use types::{
-        account::PublicKey, bytesrepr, system_contract_errors::pos::Error, BlockTime, U512,
+        account::PublicKey, encoding, system_contract_errors::pos::Error, BlockTime, U512,
     };
 
     use super::{Queue, QueueEntry};
@@ -197,6 +137,6 @@ mod tests {
         queue.push(val1, U512::from(5), BlockTime::new(0)).unwrap();
         queue.push(val2, U512::from(6), BlockTime::new(1)).unwrap();
         queue.push(val3, U512::from(7), BlockTime::new(2)).unwrap();
-        bytesrepr::test_serialization_roundtrip(&queue);
+        encoding::test_serialization_roundtrip(&queue);
     }
 }

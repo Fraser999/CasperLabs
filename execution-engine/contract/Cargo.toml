@@ -12,7 +12,7 @@ license-file = "../../LICENSE"
 
 [features]
 default = []
-std = ["casperlabs-types/std", "version-sync"]
+std = ["casperlabs-types/std", "serde/alloc", "version-sync"]
 test-support = []
 no-unstable-features = ["std", "casperlabs-types/no-unstable-features"]
 
@@ -20,6 +20,7 @@ no-unstable-features = ["std", "casperlabs-types/no-unstable-features"]
 casperlabs-types = { version = "0.5.0", path = "../types" }
 failure = { version = "0.1.6", default-features = false, features = ["failure_derive"] }
 hex_fmt = "0.3.0"
+serde = { version = "1", default-features = false, features = ["derive"] }
 wee_alloc = "0.4.5"
 # version-sync pulls in serde with `std` feature enabled, so we only want this where we have our own `std` feature enabled.
 version-sync = { version = "0.8", optional = true }

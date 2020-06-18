@@ -6,12 +6,11 @@ use alloc::vec;
 use alloc::{collections::BTreeMap, string::String, vec::Vec};
 use core::mem::MaybeUninit;
 
+use serde::de::DeserializeOwned;
+
 use casperlabs_types::{
-    account::PublicKey,
-    api_error,
-    bytesrepr::{self, FromBytes},
-    ApiError, BlockTime, CLTyped, CLValue, ContractRef, Key, Phase, URef,
-    BLOCKTIME_SERIALIZED_LENGTH, PHASE_SERIALIZED_LENGTH,
+    account::PublicKey, api_error, encoding, ApiError, BlockTime, CLTyped, CLValue, ContractRef,
+    Key, Phase, URef, BLOCKTIME_SERIALIZED_LENGTH, PHASE_SERIALIZED_LENGTH,
 };
 
 use crate::{args_parser::ArgsParser, contract_api, ext_ffi, unwrap_or_revert::UnwrapOrRevert};
@@ -44,7 +43,10 @@ pub fn revert<T: Into<ApiError>>(error: T) -> ! {
 /// stored contract calls [`revert`], then execution stops and `call_contract` doesn't return.
 /// Otherwise `call_contract` returns `()`.
 #[allow(clippy::ptr_arg)]
-pub fn call_contract<A: ArgsParser, T: CLTyped + FromBytes>(c_ptr: ContractRef, args: A) -> T {
+pub fn call_contract<A: ArgsParser, T: CLTyped + DeserializeOwned>(
+    c_ptr: ContractRef,
+    args: A,
+) -> T {
     let contract_key: Key = c_ptr.into();
     let (key_ptr, key_size, _bytes1) = contract_api::to_ptr(contract_key);
     let (args_ptr, args_size, _bytes2) = ArgsParser::parse(args)
@@ -80,7 +82,7 @@ pub fn call_contract<A: ArgsParser, T: CLTyped + FromBytes>(c_ptr: ContractRef, 
         dest
     };
 
-    bytesrepr::deserialize(serialized_result).unwrap_or_revert()
+    encoding::deserialize(&serialized_result).unwrap_or_revert()
 }
 
 /// Takes the name of a (non-mangled) `extern "C"` function to store as a contract under the given
@@ -115,7 +117,7 @@ fn get_arg_size(i: u32) -> Option<usize> {
 ///
 /// Note that this is only relevant to contracts stored on-chain since a contract deployed directly
 /// is not invoked with any arguments.
-pub fn get_arg<T: FromBytes>(i: u32) -> Option<Result<T, bytesrepr::Error>> {
+pub fn get_arg<T: DeserializeOwned>(i: u32) -> Option<Result<T, encoding::Error>> {
     let arg_size = get_arg_size(i)?;
     let arg_bytes = if arg_size > 0 {
         let res = {
@@ -131,7 +133,7 @@ pub fn get_arg<T: FromBytes>(i: u32) -> Option<Result<T, bytesrepr::Error>> {
         // Avoids allocation with 0 bytes and a call to get_arg
         Vec::new()
     };
-    Some(bytesrepr::deserialize(arg_bytes))
+    Some(encoding::deserialize(&arg_bytes))
 }
 
 /// Returns the caller of the current context, i.e. the [`PublicKey`] of the account which made the
@@ -144,7 +146,7 @@ pub fn get_caller() -> PublicKey {
         unsafe { output_size.assume_init() }
     };
     let buf = read_host_buffer(output_size).unwrap_or_revert();
-    bytesrepr::deserialize(buf).unwrap_or_revert()
+    encoding::deserialize(&buf).unwrap_or_revert()
 }
 
 /// Returns the current [`BlockTime`].
@@ -158,7 +160,7 @@ pub fn get_blocktime() -> BlockTime {
             BLOCKTIME_SERIALIZED_LENGTH,
         )
     };
-    bytesrepr::deserialize(bytes).unwrap_or_revert()
+    encoding::deserialize(&bytes).unwrap_or_revert()
 }
 
 /// Returns the current [`Phase`].
@@ -172,7 +174,7 @@ pub fn get_phase() -> Phase {
             PHASE_SERIALIZED_LENGTH,
         )
     };
-    bytesrepr::deserialize(bytes).unwrap_or_revert()
+    encoding::deserialize(&bytes).unwrap_or_revert()
 }
 
 /// Returns the requested named [`Key`] from the current context.
@@ -198,7 +200,7 @@ pub fn get_key(name: &str) -> Option<Key> {
         Err(e) => revert(e),
     }
     key_bytes.truncate(total_bytes);
-    let key: Key = bytesrepr::deserialize(key_bytes).unwrap_or_revert();
+    let key: Key = encoding::deserialize(&key_bytes).unwrap_or_revert();
     Some(key)
 }
 
@@ -250,7 +252,7 @@ pub fn list_named_keys() -> BTreeMap<String, Key> {
         return BTreeMap::new();
     }
     let bytes = read_host_buffer(result_size).unwrap_or_revert();
-    bytesrepr::deserialize(bytes).unwrap_or_revert()
+    encoding::deserialize(&bytes).unwrap_or_revert()
 }
 
 /// Validates uref against named keys.

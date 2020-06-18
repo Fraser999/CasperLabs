@@ -10,7 +10,7 @@ use serde::ser::StdError;
 pub type Result<T> = core::result::Result<T, Error>;
 
 /// An error that can be produced during serialization or deserialization.
-#[derive(Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Error {
     /// Returned if trying to serialize a type with more than 255 discriminants (e.g. a struct with
     /// too many fields, an enum with too many variants).

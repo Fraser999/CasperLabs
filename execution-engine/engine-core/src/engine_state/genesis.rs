@@ -9,7 +9,7 @@ use rand::{
 use engine_shared::{motes::Motes, newtypes::Blake2bHash, TypeMismatch};
 use engine_storage::global_state::CommitResult;
 use engine_wasm_prep::wasm_costs::WasmCosts;
-use types::{account::PublicKey, bytesrepr, Key, ProtocolVersion, U512};
+use types::{account::PublicKey, encoding, Key, ProtocolVersion, U512};
 
 use crate::engine_state::execution_effect::ExecutionEffect;
 
@@ -22,7 +22,7 @@ pub enum GenesisResult {
     RootNotFound,
     KeyNotFound(Key),
     TypeMismatch(TypeMismatch),
-    Serialization(bytesrepr::Error),
+    Encoding(encoding::Error),
     Success {
         post_state_hash: Blake2bHash,
         effect: ExecutionEffect,
@@ -37,7 +37,7 @@ impl fmt::Display for GenesisResult {
             GenesisResult::TypeMismatch(type_mismatch) => {
                 write!(f, "Type mismatch: {:?}", type_mismatch)
             }
-            GenesisResult::Serialization(error) => write!(f, "Serialization error: {:?}", error),
+            GenesisResult::Encoding(error) => write!(f, "Encoding error: {:?}", error),
             GenesisResult::Success {
                 post_state_hash,
                 effect,
@@ -52,7 +52,7 @@ impl GenesisResult {
             CommitResult::RootNotFound => GenesisResult::RootNotFound,
             CommitResult::KeyNotFound(key) => GenesisResult::KeyNotFound(key),
             CommitResult::TypeMismatch(type_mismatch) => GenesisResult::TypeMismatch(type_mismatch),
-            CommitResult::Serialization(error) => GenesisResult::Serialization(error),
+            CommitResult::Serialization(error) => GenesisResult::Encoding(error),
             CommitResult::Success { state_root, .. } => GenesisResult::Success {
                 post_state_hash: state_root,
                 effect,

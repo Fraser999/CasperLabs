@@ -2,12 +2,7 @@ use std::convert::TryFrom;
 
 use wasmi::{Externals, RuntimeArgs, RuntimeValue, Trap};
 
-use types::{
-    account::PublicKey,
-    api_error,
-    bytesrepr::{self, ToBytes},
-    Key, TransferredTo, U512,
-};
+use types::{account::PublicKey, api_error, encoding, Key, TransferredTo, U512};
 
 use engine_shared::{gas::Gas, stored_value::StoredValue};
 use engine_storage::global_state::StateReader;
@@ -259,7 +254,7 @@ where
                     .get(named_keys_ptr, named_keys_size as usize)
                     .map_err(|e| Error::Interpreter(e.into()))?;
                 let named_keys =
-                    bytesrepr::deserialize(named_keys_bytes).map_err(Error::BytesRepr)?;
+                    encoding::deserialize(&named_keys_bytes).map_err(Error::Encoding)?;
                 let contract_hash = self.store_function(fn_bytes, named_keys)?;
                 self.function_address(contract_hash, uref_addr_ptr)?;
                 Ok(None)
@@ -288,7 +283,7 @@ where
                     .get(named_keys_ptr, named_keys_size as usize)
                     .map_err(|e| Error::Interpreter(e.into()))?;
                 let named_keys =
-                    bytesrepr::deserialize(named_keys_bytes).map_err(Error::BytesRepr)?;
+                    encoding::deserialize(&named_keys_bytes).map_err(Error::Encoding)?;
                 let contract_hash = self.store_function_at_hash(fn_bytes, named_keys)?;
                 self.function_address(contract_hash, hash_ptr)?;
                 Ok(None)
@@ -360,7 +355,7 @@ where
                 // args(1) = length of array for return value
                 let (dest_ptr, dest_size): (u32, u32) = Args::parse(args)?;
                 let purse = self.create_purse()?;
-                let purse_bytes = purse.into_bytes().map_err(Error::BytesRepr)?;
+                let purse_bytes = encoding::serialize(&purse).map_err(Error::Encoding)?;
                 assert_eq!(dest_size, purse_bytes.len() as u32);
                 self.memory
                     .set(dest_ptr, &purse_bytes)
@@ -377,11 +372,11 @@ where
                     Args::parse(args)?;
                 let public_key: PublicKey = {
                     let bytes = self.bytes_from_mem(key_ptr, key_size as usize)?;
-                    bytesrepr::deserialize(bytes).map_err(Error::BytesRepr)?
+                    encoding::deserialize(&bytes).map_err(Error::Encoding)?
                 };
                 let amount: U512 = {
                     let bytes = self.bytes_from_mem(amount_ptr, amount_size as usize)?;
-                    bytesrepr::deserialize(bytes).map_err(Error::BytesRepr)?
+                    encoding::deserialize(&bytes).map_err(Error::Encoding)?
                 };
                 let ret = self.transfer_to_account(public_key, amount)?;
                 Ok(Some(RuntimeValue::I32(TransferredTo::i32_from(ret))))
@@ -405,15 +400,15 @@ where
 
                 let source_purse = {
                     let bytes = self.bytes_from_mem(source_ptr, source_size as usize)?;
-                    bytesrepr::deserialize(bytes).map_err(Error::BytesRepr)?
+                    encoding::deserialize(&bytes).map_err(Error::Encoding)?
                 };
                 let public_key: PublicKey = {
                     let bytes = self.bytes_from_mem(key_ptr, key_size as usize)?;
-                    bytesrepr::deserialize(bytes).map_err(Error::BytesRepr)?
+                    encoding::deserialize(&bytes).map_err(Error::Encoding)?
                 };
                 let amount: U512 = {
                     let bytes = self.bytes_from_mem(amount_ptr, amount_size as usize)?;
-                    bytesrepr::deserialize(bytes).map_err(Error::BytesRepr)?
+                    encoding::deserialize(&bytes).map_err(Error::Encoding)?
                 };
                 let ret = self.transfer_from_purse_to_account(source_purse, public_key, amount)?;
                 Ok(Some(RuntimeValue::I32(TransferredTo::i32_from(ret))))

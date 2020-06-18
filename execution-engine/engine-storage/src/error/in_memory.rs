@@ -2,20 +2,20 @@ use std::sync;
 
 use failure::Fail;
 
-use types::bytesrepr;
+use types::encoding;
 
 #[derive(Debug, Fail, PartialEq, Eq)]
 pub enum Error {
     #[fail(display = "{}", _0)]
-    BytesRepr(#[fail(cause)] bytesrepr::Error),
+    Encoding(#[fail(cause)] encoding::Error),
 
     #[fail(display = "Another thread panicked while holding a lock")]
     Poison,
 }
 
-impl From<bytesrepr::Error> for Error {
-    fn from(error: bytesrepr::Error) -> Self {
-        Error::BytesRepr(error)
+impl From<encoding::Error> for Error {
+    fn from(error: encoding::Error) -> Self {
+        Error::Encoding(error)
     }
 }
 

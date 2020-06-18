@@ -3,15 +3,17 @@
 //! # Usage
 //!
 //! ```
-//! use casperlabs_engine_storage::store::Store;
-//! use casperlabs_engine_storage::transaction_source::{Transaction, TransactionSource};
-//! use casperlabs_engine_storage::transaction_source::lmdb::LmdbEnvironment;
-//! use casperlabs_engine_storage::trie::{Pointer, PointerBlock, Trie};
-//! use casperlabs_engine_storage::trie_store::TrieStore;
-//! use casperlabs_engine_storage::trie_store::lmdb::LmdbTrieStore;
-//! use types::bytesrepr::ToBytes;
+//! # use engine_shared as casperlabs_engine_shared;
+//! # use types as casperlabs_types;
+//! use casperlabs_engine_shared::newtypes::Blake2bHash;
+//! use casperlabs_engine_storage::{
+//!     store::Store,
+//!     transaction_source::{lmdb::LmdbEnvironment, Transaction, TransactionSource},
+//!     trie::{Pointer, PointerBlock, Trie},
+//!     trie_store::{lmdb::LmdbTrieStore, TrieStore},
+//! };
+//! use casperlabs_types::encoding;
 //! use lmdb::DatabaseFlags;
-//! use engine_shared::newtypes::Blake2bHash;
 //! use tempfile::tempdir;
 //!
 //! // Create some leaves
@@ -19,8 +21,8 @@
 //! let leaf_2 = Trie::Leaf { key: vec![1u8, 0, 0], value: b"val_2".to_vec() };
 //!
 //! // Get their hashes
-//! let leaf_1_hash = Blake2bHash::new(&leaf_1.to_bytes().unwrap());
-//! let leaf_2_hash = Blake2bHash::new(&leaf_2.to_bytes().unwrap());
+//! let leaf_1_hash = Blake2bHash::new(&encoding::serialize(&leaf_1).unwrap());
+//! let leaf_2_hash = Blake2bHash::new(&encoding::serialize(&leaf_2).unwrap());
 //!
 //! // Create a node
 //! let node: Trie<Vec<u8>, Vec<u8>> = {
@@ -32,7 +34,7 @@
 //! };
 //!
 //! // Get its hash
-//! let node_hash = Blake2bHash::new(&node.to_bytes().unwrap());
+//! let node_hash = Blake2bHash::new(&encoding::serialize(&node).unwrap());
 //!
 //! // Create the environment and the store. For both the in-memory and
 //! // LMDB-backed implementations, the environment is the source of

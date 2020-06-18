@@ -1,7 +1,7 @@
 use std::{collections::BTreeMap, mem};
 
 use engine_shared::{account::Account, contract::Contract, stored_value::StoredValue};
-use types::Key;
+use types::{encoding, Key};
 
 /// Returns byte size of the element - both heap size and stack size.
 pub trait ByteSize {
@@ -47,7 +47,9 @@ impl ByteSize for StoredValue {
     fn byte_size(&self) -> usize {
         mem::size_of::<Self>()
             + match self {
-                StoredValue::CLValue(cl_value) => cl_value.serialized_length(),
+                StoredValue::CLValue(cl_value) => {
+                    encoding::serialized_length(cl_value).unwrap_or_default() as usize
+                }
                 StoredValue::Account(account) => account.heap_size(),
                 StoredValue::Contract(contract) => contract.heap_size(),
             }

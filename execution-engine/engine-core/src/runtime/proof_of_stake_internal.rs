@@ -9,8 +9,8 @@ use proof_of_stake::{
     MintProvider, ProofOfStake, Queue, QueueProvider, RuntimeProvider, Stakes, StakesProvider,
 };
 use types::{
-    account::PublicKey, bytesrepr::ToBytes, system_contract_errors::pos::Error, ApiError,
-    BlockTime, CLValue, Key, Phase, TransferredTo, URef, U512,
+    account::PublicKey, encoding, system_contract_errors::pos::Error, ApiError, BlockTime, CLValue,
+    Key, Phase, TransferredTo, URef, U512,
 };
 
 use crate::{execution, runtime::Runtime};
@@ -63,7 +63,7 @@ where
     R::Error: Into<execution::Error>,
 {
     fn read_bonding(&mut self) -> Queue {
-        let key = BONDING_KEY.to_bytes().expect("should serialize");
+        let key = encoding::serialize(&BONDING_KEY).expect("should serialize");
         match self.context.read_ls(&key) {
             Ok(Some(cl_value)) => cl_value.into_t().expect("should convert"),
             _ => Queue::default(),
@@ -71,7 +71,7 @@ where
     }
 
     fn read_unbonding(&mut self) -> Queue {
-        let key = UNBONDING_KEY.to_bytes().expect("should serialize");
+        let key = encoding::serialize(&UNBONDING_KEY).expect("should serialize");
         match self.context.read_ls(&key) {
             Ok(Some(cl_value)) => cl_value.into_t().expect("should convert"),
             _ => Queue::default(),
@@ -79,7 +79,7 @@ where
     }
 
     fn write_bonding(&mut self, queue: Queue) {
-        let key = BONDING_KEY.to_bytes().expect("should serialize");
+        let key = encoding::serialize(&BONDING_KEY).expect("should serialize");
         let value = CLValue::from_t(queue).expect("should convert");
         self.context
             .write_ls(&key, value)
@@ -87,7 +87,7 @@ where
     }
 
     fn write_unbonding(&mut self, queue: Queue) {
-        let key = UNBONDING_KEY.to_bytes().expect("should serialize");
+        let key = encoding::serialize(&UNBONDING_KEY).expect("should serialize");
         let value = CLValue::from_t(queue).expect("should convert");
         self.context
             .write_ls(&key, value)

@@ -2,8 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use engine_shared::newtypes::{Blake2bHash, BLAKE2B_DIGEST_LENGTH};
-use types::bytesrepr::{self, FromBytes, ToBytes, U8_SERIALIZED_LENGTH};
+use engine_shared::newtypes::Blake2bHash;
 
 #[cfg(test)]
 pub mod gens;
@@ -35,46 +34,6 @@ impl Pointer {
         match self {
             Pointer::LeafPointer(_) => Pointer::LeafPointer(hash),
             Pointer::NodePointer(_) => Pointer::NodePointer(hash),
-        }
-    }
-
-    fn tag(&self) -> u8 {
-        match self {
-            Pointer::LeafPointer(_) => 0,
-            Pointer::NodePointer(_) => 1,
-        }
-    }
-}
-
-impl ToBytes for Pointer {
-    fn to_bytes(&self) -> Result<Vec<u8>, bytesrepr::Error> {
-        let mut ret = bytesrepr::unchecked_allocate_buffer(self);
-        ret.push(self.tag());
-
-        let mut hash_bytes = self.hash().to_bytes()?;
-        ret.append(&mut hash_bytes);
-
-        Ok(ret)
-    }
-
-    fn serialized_length(&self) -> usize {
-        U8_SERIALIZED_LENGTH + BLAKE2B_DIGEST_LENGTH
-    }
-}
-
-impl FromBytes for Pointer {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), bytesrepr::Error> {
-        let (tag, rem) = u8::from_bytes(bytes)?;
-        match tag {
-            0 => {
-                let (hash, rem) = Blake2bHash::from_bytes(rem)?;
-                Ok((Pointer::LeafPointer(hash), rem))
-            }
-            1 => {
-                let (hash, rem) = Blake2bHash::from_bytes(rem)?;
-                Ok((Pointer::NodePointer(hash), rem))
-            }
-            _ => Err(bytesrepr::Error::Formatting),
         }
     }
 }
@@ -123,22 +82,6 @@ impl Eq for PointerBlock {}
 impl Default for PointerBlock {
     fn default() -> Self {
         PointerBlock([Default::default(); RADIX])
-    }
-}
-
-impl ToBytes for PointerBlock {
-    fn to_bytes(&self) -> Result<Vec<u8>, bytesrepr::Error> {
-        self.0.to_bytes()
-    }
-
-    fn serialized_length(&self) -> usize {
-        self.0.serialized_length()
-    }
-}
-
-impl FromBytes for PointerBlock {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), bytesrepr::Error> {
-        FromBytes::from_bytes(bytes).map(|(arr, rem)| (PointerBlock(arr), rem))
     }
 }
 
@@ -222,14 +165,6 @@ pub enum Trie<K, V> {
 }
 
 impl<K, V> Trie<K, V> {
-    fn tag(&self) -> u8 {
-        match self {
-            Trie::Leaf { .. } => 0,
-            Trie::Node { .. } => 1,
-            Trie::Extension { .. } => 2,
-        }
-    }
-
     /// Constructs a [`Trie::Leaf`] from a given key and value.
     pub fn leaf(key: K, value: V) -> Self {
         Trie::Leaf { key, value }
@@ -255,84 +190,22 @@ impl<K, V> Trie<K, V> {
     }
 }
 
-impl<K, V> ToBytes for Trie<K, V>
-where
-    K: ToBytes,
-    V: ToBytes,
-{
-    fn to_bytes(&self) -> Result<Vec<u8>, bytesrepr::Error> {
-        let mut ret = bytesrepr::allocate_buffer(self)?;
-        ret.push(self.tag());
-
-        match self {
-            Trie::Leaf { key, value } => {
-                ret.append(&mut key.to_bytes()?);
-                ret.append(&mut value.to_bytes()?);
-            }
-            Trie::Node { pointer_block } => {
-                ret.append(&mut pointer_block.to_bytes()?);
-            }
-            Trie::Extension { affix, pointer } => {
-                ret.append(&mut affix.to_bytes()?);
-                ret.append(&mut pointer.to_bytes()?);
-            }
-        }
-        Ok(ret)
-    }
-
-    fn serialized_length(&self) -> usize {
-        U8_SERIALIZED_LENGTH
-            + match self {
-                Trie::Leaf { key, value } => key.serialized_length() + value.serialized_length(),
-                Trie::Node { pointer_block } => pointer_block.serialized_length(),
-                Trie::Extension { affix, pointer } => {
-                    affix.serialized_length() + pointer.serialized_length()
-                }
-            }
-    }
-}
-
-impl<K: FromBytes, V: FromBytes> FromBytes for Trie<K, V> {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), bytesrepr::Error> {
-        let (tag, rem) = u8::from_bytes(bytes)?;
-        match tag {
-            0 => {
-                let (key, rem) = K::from_bytes(rem)?;
-                let (value, rem) = V::from_bytes(rem)?;
-                Ok((Trie::Leaf { key, value }, rem))
-            }
-            1 => {
-                let (pointer_block, rem) = PointerBlock::from_bytes(rem)?;
-                Ok((
-                    Trie::Node {
-                        pointer_block: Box::new(pointer_block),
-                    },
-                    rem,
-                ))
-            }
-            2 => {
-                let (affix, rem) = Vec::<u8>::from_bytes(rem)?;
-                let (pointer, rem) = Pointer::from_bytes(rem)?;
-                Ok((Trie::Extension { affix, pointer }, rem))
-            }
-            _ => Err(bytesrepr::Error::Formatting),
-        }
-    }
-}
-
 pub(crate) mod operations {
-    use crate::trie::Trie;
+    use serde::Serialize;
+
     use engine_shared::newtypes::Blake2bHash;
-    use types::bytesrepr::{self, ToBytes};
+    use types::encoding;
+
+    use crate::trie::Trie;
 
     /// Creates a tuple containing an empty root hash and an empty root (a node
     /// with an empty pointer block)
-    pub fn create_hashed_empty_trie<K: ToBytes, V: ToBytes>(
-    ) -> Result<(Blake2bHash, Trie<K, V>), bytesrepr::Error> {
+    pub fn create_hashed_empty_trie<K: Serialize, V: Serialize>(
+    ) -> Result<(Blake2bHash, Trie<K, V>), encoding::Error> {
         let root: Trie<K, V> = Trie::Node {
             pointer_block: Default::default(),
         };
-        let root_bytes: Vec<u8> = root.to_bytes()?;
+        let root_bytes: Vec<u8> = encoding::serialize(&root)?;
         Ok((Blake2bHash::new(&root_bytes), root))
     }
 }

@@ -11,7 +11,7 @@ use engine_shared::{
     transform::{self, Transform},
     TypeMismatch,
 };
-use types::{account::PublicKey, bytesrepr, Key, ProtocolVersion, U512};
+use types::{account::PublicKey, encoding, Key, ProtocolVersion, U512};
 
 use crate::{
     protocol_data::ProtocolData,
@@ -49,7 +49,7 @@ pub enum CommitResult {
     },
     KeyNotFound(Key),
     TypeMismatch(TypeMismatch),
-    Serialization(bytesrepr::Error),
+    Serialization(encoding::Error),
 }
 
 impl fmt::Display for CommitResult {
@@ -125,7 +125,7 @@ where
     R: TransactionSource<'a, Handle = S::Handle>,
     S: TrieStore<Key, StoredValue>,
     S::Error: From<R::Error>,
-    E: From<R::Error> + From<S::Error> + From<types::bytesrepr::Error>,
+    E: From<R::Error> + From<S::Error> + From<types::encoding::Error>,
     H: BuildHasher,
 {
     let mut txn = environment.create_read_write_txn()?;

@@ -1,4 +1,4 @@
-use alloc::{format, string::String, vec::Vec};
+use alloc::{format, string::String};
 use core::fmt::{self, Debug, Display, Formatter};
 
 use blake2::{
@@ -8,16 +8,7 @@ use blake2::{
 use hex_fmt::HexFmt;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    account::PublicKey,
-    bytesrepr::{self, Error, FromBytes, ToBytes},
-    ContractRef, URef, UREF_SERIALIZED_LENGTH,
-};
-
-const ACCOUNT_ID: u8 = 0;
-const HASH_ID: u8 = 1;
-const UREF_ID: u8 = 2;
-const LOCAL_ID: u8 = 3;
+use crate::{account::PublicKey, ContractRef, URef};
 
 /// The number of bytes in a Blake2b hash
 pub const BLAKE2B_DIGEST_LENGTH: usize = 32;
@@ -27,12 +18,6 @@ pub const KEY_HASH_LENGTH: usize = 32;
 pub const KEY_LOCAL_LENGTH: usize = 64;
 /// The number of bytes in the seed for a new [`Key::Local`].
 pub const KEY_LOCAL_SEED_LENGTH: usize = 32;
-
-const KEY_ID_SERIALIZED_LENGTH: usize = 1; // u8 used to determine the ID
-const KEY_HASH_SERIALIZED_LENGTH: usize = KEY_ID_SERIALIZED_LENGTH + KEY_HASH_LENGTH;
-const KEY_UREF_SERIALIZED_LENGTH: usize = KEY_ID_SERIALIZED_LENGTH + UREF_SERIALIZED_LENGTH;
-const KEY_LOCAL_SERIALIZED_LENGTH: usize =
-    KEY_ID_SERIALIZED_LENGTH + KEY_LOCAL_SEED_LENGTH + BLAKE2B_DIGEST_LENGTH;
 
 /// Creates a 32-byte BLAKE2b hash digest from a given a piece of data
 fn hash(bytes: &[u8]) -> [u8; BLAKE2B_DIGEST_LENGTH] {
@@ -89,7 +74,7 @@ impl Key {
 
     /// Returns the maximum size a [`Key`] can be serialized into.
     pub const fn max_serialized_length() -> usize {
-        KEY_LOCAL_SERIALIZED_LENGTH
+        KEY_LOCAL_SEED_LENGTH + BLAKE2B_DIGEST_LENGTH + 1
     }
 
     /// If `self` is of type [`Key::URef`], returns `self` with the [`AccessRights`] stripped from
@@ -197,74 +182,18 @@ impl From<URef> for Key {
     }
 }
 
-impl ToBytes for Key {
-    fn to_bytes(&self) -> Result<Vec<u8>, Error> {
-        let mut result = bytesrepr::unchecked_allocate_buffer(self);
-        match self {
-            Key::Account(public_key) => {
-                result.push(ACCOUNT_ID);
-                result.append(&mut public_key.to_bytes()?);
-            }
-            Key::Hash(hash) => {
-                result.push(HASH_ID);
-                result.append(&mut hash.to_bytes()?);
-            }
-            Key::URef(uref) => {
-                result.push(UREF_ID);
-                result.append(&mut uref.to_bytes()?);
-            }
-            Key::Local { seed, hash } => {
-                result.push(LOCAL_ID);
-                result.append(&mut seed.to_bytes()?);
-                result.append(&mut hash.to_bytes()?);
-            }
-        }
-        Ok(result)
-    }
-
-    fn serialized_length(&self) -> usize {
-        match self {
-            Key::Account(public_key) => KEY_ID_SERIALIZED_LENGTH + public_key.serialized_length(),
-            Key::Hash(_) => KEY_HASH_SERIALIZED_LENGTH,
-            Key::URef(_) => KEY_UREF_SERIALIZED_LENGTH,
-            Key::Local { .. } => KEY_LOCAL_SERIALIZED_LENGTH,
-        }
-    }
-}
-
-impl FromBytes for Key {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), Error> {
-        let (id, remainder) = u8::from_bytes(bytes)?;
-        match id {
-            ACCOUNT_ID => {
-                let (public_key, rem) = PublicKey::from_bytes(remainder)?;
-                Ok((Key::Account(public_key), rem))
-            }
-            HASH_ID => {
-                let (hash, rem) = <[u8; KEY_HASH_LENGTH]>::from_bytes(remainder)?;
-                Ok((Key::Hash(hash), rem))
-            }
-            UREF_ID => {
-                let (uref, rem) = URef::from_bytes(remainder)?;
-                Ok((Key::URef(uref), rem))
-            }
-            LOCAL_ID => {
-                let (seed, remainder) = <[u8; KEY_LOCAL_SEED_LENGTH]>::from_bytes(remainder)?;
-                let (hash, remainder) = <[u8; BLAKE2B_DIGEST_LENGTH]>::from_bytes(remainder)?;
-                Ok((Key::Local { seed, hash }, remainder))
-            }
-            _ => Err(Error::Formatting),
-        }
+impl Default for Key {
+    fn default() -> Self {
+        Key::Hash(<[u8; 32]>::default())
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec::Vec;
+
     use super::*;
-    use crate::{
-        bytesrepr::{Error, FromBytes},
-        AccessRights, URef,
-    };
+    use crate::{encoding, AccessRights, URef};
 
     fn test_readable(right: AccessRights, is_true: bool) {
         assert_eq!(right.is_readable(), is_true)
@@ -346,11 +275,8 @@ mod tests {
     fn abuse_vec_key() {
         // Prefix is 2^32-1 = shouldn't allocate that much
         let bytes: Vec<u8> = vec![255, 255, 255, 255, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-        let res: Result<(Vec<Key>, &[u8]), _> = FromBytes::from_bytes(&bytes);
-        #[cfg(target_os = "linux")]
-        assert_eq!(res.expect_err("should fail"), Error::OutOfMemory);
-        #[cfg(target_os = "macos")]
-        assert_eq!(res.expect_err("should fail"), Error::EarlyEndOfStream);
+        let res = encoding::deserialize::<Vec<Key>>(&bytes);
+        assert_eq!(res.expect_err("should fail"), encoding::Error::EndOfSlice);
     }
 
     #[test]
@@ -400,15 +326,27 @@ mod tests {
     #[test]
     fn key_max_serialized_length() {
         let key_account = Key::Account(PublicKey::ed25519_from([42; 32]));
-        assert!(key_account.serialized_length() < Key::max_serialized_length());
+        assert!(
+            (encoding::serialized_length(&key_account).unwrap() as usize)
+                < Key::max_serialized_length()
+        );
 
         let key_hash = Key::Hash([42; 32]);
-        assert!(key_hash.serialized_length() < Key::max_serialized_length());
+        assert!(
+            (encoding::serialized_length(&key_hash).unwrap() as usize)
+                < Key::max_serialized_length()
+        );
 
         let key_uref = Key::URef(URef::new([42; 32], AccessRights::READ));
-        assert!(key_uref.serialized_length() < Key::max_serialized_length());
+        assert!(
+            (encoding::serialized_length(&key_uref).unwrap() as usize)
+                < Key::max_serialized_length()
+        );
 
         let key_local = Key::local([42; 32], &[42; 32]);
-        assert_eq!(key_local.serialized_length(), Key::max_serialized_length());
+        assert_eq!(
+            encoding::serialized_length(&key_local).unwrap() as usize,
+            Key::max_serialized_length()
+        );
     }
 }

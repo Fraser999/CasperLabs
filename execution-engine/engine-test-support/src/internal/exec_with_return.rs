@@ -1,5 +1,7 @@
 use std::{cell::RefCell, collections::BTreeSet, convert::TryInto, rc::Rc};
 
+use serde::de::DeserializeOwned;
+
 use contract::args_parser::ArgsParser;
 use engine_core::{
     engine_state::{
@@ -15,8 +17,7 @@ use engine_shared::{gas::Gas, newtypes::CorrelationId};
 use engine_storage::{global_state::StateProvider, protocol_data::ProtocolData};
 use engine_wasm_prep::Preprocessor;
 use types::{
-    account::PublicKey, bytesrepr::FromBytes, BlockTime, CLTyped, CLValue, Key, Phase,
-    ProtocolVersion, URef, U512,
+    account::PublicKey, BlockTime, CLTyped, CLValue, Key, Phase, ProtocolVersion, URef, U512,
 };
 
 use crate::internal::{utils, WasmTestBuilder, DEFAULT_WASM_COSTS};
@@ -42,7 +43,7 @@ where
     S: StateProvider,
     S::Error: Into<execution::Error>,
     EngineState<S>: ExecutionEngineService,
-    T: FromBytes + CLTyped,
+    T: CLTyped + DeserializeOwned,
 {
     let prestate = builder
         .get_post_state_hash()

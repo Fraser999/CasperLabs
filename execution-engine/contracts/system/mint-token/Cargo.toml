@@ -14,4 +14,5 @@ test = false
 [dependencies]
 contract = { path = "../../../contract", package = "casperlabs-contract" }
 mint = { path = "../../../mint", package = "casperlabs-mint" }
+serde = { version = "1", default-features = false, features = ["derive"] }
 types = { path = "../../../types", package = "casperlabs-types" }

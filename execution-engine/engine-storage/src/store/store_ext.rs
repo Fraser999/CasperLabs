@@ -1,4 +1,4 @@
-use types::bytesrepr::{FromBytes, ToBytes};
+use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{
     store::Store,
@@ -13,8 +13,8 @@ pub trait StoreExt<K, V>: Store<K, V> {
     ) -> Result<Vec<Option<V>>, Self::Error>
     where
         T: Readable<Handle = Self::Handle>,
-        K: ToBytes + 'a,
-        V: FromBytes,
+        K: Serialize + 'a,
+        V: DeserializeOwned,
         Self::Error: From<T::Error>,
     {
         let mut ret: Vec<Option<V>> = Vec::new();
@@ -32,8 +32,8 @@ pub trait StoreExt<K, V>: Store<K, V> {
     ) -> Result<(), Self::Error>
     where
         T: Writable<Handle = Self::Handle>,
-        K: ToBytes + 'a,
-        V: ToBytes + 'a,
+        K: Serialize + 'a,
+        V: Serialize + 'a,
         Self::Error: From<T::Error>,
     {
         for (key, value) in pairs {

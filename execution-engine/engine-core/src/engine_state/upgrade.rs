@@ -3,7 +3,7 @@ use std::fmt;
 use engine_shared::{newtypes::Blake2bHash, TypeMismatch};
 use engine_storage::global_state::CommitResult;
 use engine_wasm_prep::wasm_costs::WasmCosts;
-use types::{bytesrepr, Key, ProtocolVersion};
+use types::{encoding, Key, ProtocolVersion};
 
 use crate::engine_state::execution_effect::ExecutionEffect;
 
@@ -13,7 +13,7 @@ pub enum UpgradeResult {
     RootNotFound,
     KeyNotFound(Key),
     TypeMismatch(TypeMismatch),
-    Serialization(bytesrepr::Error),
+    Encoding(encoding::Error),
     Success {
         post_state_hash: Blake2bHash,
         effect: ExecutionEffect,
@@ -28,7 +28,7 @@ impl fmt::Display for UpgradeResult {
             UpgradeResult::TypeMismatch(type_mismatch) => {
                 write!(f, "Type mismatch: {:?}", type_mismatch)
             }
-            UpgradeResult::Serialization(error) => write!(f, "Serialization error: {:?}", error),
+            UpgradeResult::Encoding(error) => write!(f, "Encoding error: {:?}", error),
             UpgradeResult::Success {
                 post_state_hash,
                 effect,
@@ -43,7 +43,7 @@ impl UpgradeResult {
             CommitResult::RootNotFound => UpgradeResult::RootNotFound,
             CommitResult::KeyNotFound(key) => UpgradeResult::KeyNotFound(key),
             CommitResult::TypeMismatch(type_mismatch) => UpgradeResult::TypeMismatch(type_mismatch),
-            CommitResult::Serialization(error) => UpgradeResult::Serialization(error),
+            CommitResult::Serialization(error) => UpgradeResult::Encoding(error),
             CommitResult::Success { state_root, .. } => UpgradeResult::Success {
                 post_state_hash: state_root,
                 effect,

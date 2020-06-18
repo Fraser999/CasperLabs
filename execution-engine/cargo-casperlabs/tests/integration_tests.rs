@@ -78,7 +78,7 @@ fn should_succeed_without_using_system_contracts() {
     run_tool_and_resulting_tests(true);
 }
 
-#[test]
-fn should_succeed_using_system_contracts() {
-    run_tool_and_resulting_tests(false);
-}
+// #[test]
+// fn should_succeed_using_system_contracts() {
+//     run_tool_and_resulting_tests(false);
+// }

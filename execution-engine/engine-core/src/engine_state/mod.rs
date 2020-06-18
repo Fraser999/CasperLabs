@@ -39,7 +39,7 @@ use engine_storage::{
 };
 use engine_wasm_prep::{wasm_costs::WasmCosts, Preprocessor};
 use types::{
-    account::PublicKey, bytesrepr::ToBytes, system_contract_errors::mint,
+    account::PublicKey, encoding, system_contract_errors::mint,
     system_contract_type::PROOF_OF_STAKE, AccessRights, BlockTime, Key, Phase, ProtocolVersion,
     URef, KEY_HASH_LENGTH, U512, UREF_ADDR_LENGTH,
 };
@@ -230,10 +230,10 @@ where
                 preprocessor.preprocess(proof_of_stake_installer_bytes)?;
             let args = {
                 let args = (mint_reference, bonded_validators);
-                ArgsParser::parse(args)
-                    .expect("args should convert to `Vec<CLValue>`")
-                    .into_bytes()
-                    .expect("args should serialize")
+                encoding::serialize(
+                    &ArgsParser::parse(args).expect("args should convert to `Vec<CLValue>`"),
+                )
+                .expect("args should serialize")
             };
             let mut named_keys = BTreeMap::new();
             let authorization_keys: BTreeSet<PublicKey> = BTreeSet::new();
@@ -385,10 +385,10 @@ where
                 let args = {
                     let motes = account.balance().value();
                     let args = (MINT_METHOD_NAME, motes);
-                    ArgsParser::parse(args)
-                        .expect("args should convert to `Vec<CLValue>`")
-                        .into_bytes()
-                        .expect("args should serialize")
+                    encoding::serialize(
+                        &ArgsParser::parse(args).expect("args should convert to `Vec<CLValue>`"),
+                    )
+                    .expect("args should serialize")
                 };
                 let tracking_copy_exec = Rc::clone(&tracking_copy);
                 let tracking_copy_write = Rc::clone(&tracking_copy);
@@ -402,7 +402,7 @@ where
                 let address_generator = {
                     let generator = AddressGeneratorBuilder::new()
                         .seed_with(&genesis_config_hash.value())
-                        .seed_with(&account_public_key.to_bytes()?)
+                        .seed_with(&encoding::serialize(&account_public_key)?)
                         .seed_with(&[phase as u8])
                         .build();
                     Rc::new(RefCell::new(generator))
@@ -575,11 +575,8 @@ where
 
                 let deploy_hash = {
                     // seeds address generator w/ protocol version
-                    let bytes: Vec<u8> = upgrade_config
-                        .new_protocol_version()
-                        .value()
-                        .into_bytes()?
-                        .to_vec();
+                    let bytes: Vec<u8> =
+                        encoding::serialize(&upgrade_config.new_protocol_version().value())?;
                     Blake2bHash::new(&bytes).into()
                 };
 
@@ -1296,9 +1293,8 @@ where
                 //((gas spent during payment code execution) + (gas spent during session code execution)) * conv_rate
                 let finalize_cost_motes: Motes = Motes::from_gas(execution_result_builder.total_cost(), CONV_RATE).expect("motes overflow");
                 let args = ("finalize_payment", finalize_cost_motes.value(), account_addr);
-                ArgsParser::parse(args)
-                    .expect("args should convert to `Vec<CLValue>`")
-                    .into_bytes()
+                encoding::serialize(&ArgsParser::parse(args)
+                    .expect("args should convert to `Vec<CLValue>`"))
                     .expect("args should serialize")
             };
 

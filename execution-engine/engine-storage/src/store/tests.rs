@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use types::bytesrepr::{FromBytes, ToBytes};
+use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{
     store::{Store, StoreExt},
@@ -14,8 +14,8 @@ fn roundtrip<'a, K, V, X, S>(
     items: &BTreeMap<K, V>,
 ) -> Result<Vec<Option<V>>, S::Error>
 where
-    K: ToBytes,
-    V: ToBytes + FromBytes,
+    K: Serialize,
+    V: Serialize + DeserializeOwned,
     X: TransactionSource<'a, Handle = S::Handle>,
     S: Store<K, V>,
     S::Error: From<X::Error>,
@@ -34,8 +34,8 @@ pub fn roundtrip_succeeds<'a, K, V, X, S>(
     items: BTreeMap<K, V>,
 ) -> Result<bool, S::Error>
 where
-    K: ToBytes,
-    V: ToBytes + FromBytes + Clone + PartialEq,
+    K: Serialize,
+    V: Serialize + DeserializeOwned + Clone + PartialEq,
     X: TransactionSource<'a, Handle = S::Handle>,
     S: Store<K, V>,
     S::Error: From<X::Error>,

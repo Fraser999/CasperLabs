@@ -8,8 +8,10 @@ extern crate alloc;
 use alloc::vec;
 use alloc::{collections::BTreeMap, vec::Vec};
 
+use serde::Serialize;
+
 use contract::{args_parser::ArgsParser, contract_api::storage};
-use types::{bytesrepr::ToBytes, ContractRef, Key};
+use types::{encoding, ContractRef, Key};
 
 #[no_mangle]
 pub extern "C" fn do_nothing() {
@@ -18,8 +20,8 @@ pub extern "C" fn do_nothing() {
 }
 
 // Attacker copied to_ptr from `alloc_utils` as it was private
-fn to_ptr<T: ToBytes>(t: T) -> (*const u8, usize, Vec<u8>) {
-    let bytes = t.into_bytes().expect("Unable to serialize data");
+fn to_ptr<T: Serialize>(t: T) -> (*const u8, usize, Vec<u8>) {
+    let bytes = encoding::serialize(&t).expect("Unable to serialize data");
     let ptr = bytes.as_ptr();
     let size = bytes.len();
     (ptr, size, bytes)

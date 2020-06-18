@@ -1,4 +1,4 @@
-use alloc::{format, string::String, vec::Vec};
+use alloc::{format, string::String};
 use core::{
     convert::TryFrom,
     fmt::{self, Debug, Display, Formatter},
@@ -7,13 +7,13 @@ use core::{
 use hex_fmt::HexFmt;
 use serde::{Deserialize, Serialize};
 
-use crate::{bytesrepr, AccessRights, ApiError, Key, ACCESS_RIGHTS_SERIALIZED_LENGTH};
+use crate::{AccessRights, ApiError, Key};
 
 /// The number of bytes in a [`URef`] address.
 pub const UREF_ADDR_LENGTH: usize = 32;
 
-/// The number of bytes in a serialized [`URef`] where the [`AccessRights`] are not `None`.
-pub const UREF_SERIALIZED_LENGTH: usize = UREF_ADDR_LENGTH + ACCESS_RIGHTS_SERIALIZED_LENGTH;
+/// The number of bytes in a serialized [`URef`].
+pub const UREF_SERIALIZED_LENGTH: usize = UREF_ADDR_LENGTH + 1;
 
 /// Represents an unforgeable reference, containing an address in the network's global storage and
 /// the [`AccessRights`] of the reference.
@@ -106,27 +106,6 @@ impl Debug for URef {
     }
 }
 
-impl bytesrepr::ToBytes for URef {
-    fn to_bytes(&self) -> Result<Vec<u8>, bytesrepr::Error> {
-        let mut result = bytesrepr::unchecked_allocate_buffer(self);
-        result.append(&mut self.0.to_bytes()?);
-        result.append(&mut self.1.to_bytes()?);
-        Ok(result)
-    }
-
-    fn serialized_length(&self) -> usize {
-        UREF_SERIALIZED_LENGTH
-    }
-}
-
-impl bytesrepr::FromBytes for URef {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), bytesrepr::Error> {
-        let (id, rem): ([u8; 32], &[u8]) = bytesrepr::FromBytes::from_bytes(bytes)?;
-        let (access_rights, rem): (AccessRights, &[u8]) = bytesrepr::FromBytes::from_bytes(rem)?;
-        Ok((URef(id, access_rights), rem))
-    }
-}
-
 impl TryFrom<Key> for URef {
     type Error = ApiError;
 
@@ -139,9 +118,17 @@ impl TryFrom<Key> for URef {
     }
 }
 
+impl Default for URef {
+    fn default() -> Self {
+        URef([0; UREF_ADDR_LENGTH], AccessRights::NONE)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use crate::encoding;
 
     #[test]
     fn uref_as_string() {
@@ -165,5 +152,12 @@ mod tests {
             uref_c.as_string(),
             "uref-0000000000000000000000000000000000000000000000000000000000000000-000"
         );
+    }
+
+    #[test]
+    fn serialized_length() {
+        let uref = URef::new([0; 32], AccessRights::READ);
+        let actual_length = encoding::serialized_length(&uref).unwrap();
+        assert_eq!(actual_length as usize, UREF_SERIALIZED_LENGTH);
     }
 }

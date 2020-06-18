@@ -1,17 +1,15 @@
 //! Home of the Mint contract's [`Error`] type.
 
-use alloc::{fmt, vec::Vec};
-use core::convert::{TryFrom, TryInto};
+use alloc::fmt;
+use core::convert::TryFrom;
 
 use failure::Fail;
+use serde_repr::{Deserialize_repr, Serialize_repr};
 
-use crate::{
-    bytesrepr::{self, FromBytes, ToBytes, U8_SERIALIZED_LENGTH},
-    AccessRights, CLType, CLTyped,
-};
+use crate::{AccessRights, CLType, CLTyped};
 
 /// Errors which can occur while executing the Mint contract.
-#[derive(Fail, Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Fail, Debug, Copy, Clone, PartialEq, Eq, Serialize_repr, Deserialize_repr)]
 #[repr(u8)]
 pub enum Error {
     /// Insufficient funds to complete the transfer.
@@ -81,29 +79,6 @@ impl TryFrom<u8> for Error {
             }
             _ => Err(TryFromU8ForError(())),
         }
-    }
-}
-
-impl ToBytes for Error {
-    fn to_bytes(&self) -> Result<Vec<u8>, bytesrepr::Error> {
-        let value = *self as u8;
-        value.to_bytes()
-    }
-
-    fn serialized_length(&self) -> usize {
-        U8_SERIALIZED_LENGTH
-    }
-}
-
-impl FromBytes for Error {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), bytesrepr::Error> {
-        let (value, rem): (u8, _) = FromBytes::from_bytes(bytes)?;
-        let error: Error = value
-            .try_into()
-            // In case an Error variant is unable to be determined it would return an
-            // Error::Formatting as if its unable to be correctly deserialized.
-            .map_err(|_| bytesrepr::Error::Formatting)?;
-        Ok((error, rem))
     }
 }
 

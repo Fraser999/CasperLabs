@@ -10,7 +10,7 @@ use crate::{
         AddKeyFailure, RemoveKeyFailure, SetThresholdFailure, TryFromIntError,
         TryFromSliceForPublicKeyError, UpdateKeyFailure,
     },
-    bytesrepr,
+    encoding,
     system_contract_errors::{mint, pos},
     CLValueError,
 };
@@ -119,58 +119,82 @@ const POS_ERROR_MAX: u32 = RESERVED_ERROR_MAX;
 /// 16 => CLTypeMismatch
 /// # );
 /// # show_and_check!(
-/// 17 => EarlyEndOfStream
+/// 17 => ApiError::EncodingExcessiveDiscriminants
 /// # );
 /// # show_and_check!(
-/// 18 => Formatting
+/// 18 => ApiError::EncodingEndOfSlice
 /// # );
 /// # show_and_check!(
-/// 19 => LeftOverBytes
+/// 19 => ApiError::EncodingLeftOverBytes
 /// # );
 /// # show_and_check!(
-/// 20 => OutOfMemory
+/// 20 => ApiError::EncodingInvalidUtf8
 /// # );
 /// # show_and_check!(
-/// 21 => MaxKeysLimit
+/// 21 => ApiError::EncodingInvalidBool
 /// # );
 /// # show_and_check!(
-/// 22 => DuplicateKey
+/// 22 => ApiError::EncodingInvalidChar
 /// # );
 /// # show_and_check!(
-/// 23 => PermissionDenied
+/// 23 => ApiError::EncodingInvalidTag
 /// # );
 /// # show_and_check!(
-/// 24 => MissingKey
+/// 24 => ApiError::EncodingUnsupported
 /// # );
 /// # show_and_check!(
-/// 25 => ThresholdViolation
+/// 25 => ApiError::EncodingSizeLimit
 /// # );
 /// # show_and_check!(
-/// 26 => KeyManagementThreshold
+/// 26 => ApiError::EncodingSequenceMustHaveLength
 /// # );
 /// # show_and_check!(
-/// 27 => DeploymentThreshold
+/// 27 => ApiError::EncodingCustom
 /// # );
 /// # show_and_check!(
-/// 28 => InsufficientTotalWeight
+/// 28 => ApiError::MaxKeysLimit
 /// # );
 /// # show_and_check!(
-/// 29 => InvalidSystemContract
+/// 29 => ApiError::DuplicateKey
 /// # );
 /// # show_and_check!(
-/// 30 => PurseNotCreated
+/// 30 => ApiError::PermissionDenied
 /// # );
 /// # show_and_check!(
-/// 31 => Unhandled
+/// 31 => ApiError::MissingKey
 /// # );
 /// # show_and_check!(
-/// 32 => BufferTooSmall
+/// 32 => ApiError::ThresholdViolation
 /// # );
 /// # show_and_check!(
-/// 33 => HostBufferEmpty
+/// 33 => ApiError::KeyManagementThreshold
 /// # );
 /// # show_and_check!(
-/// 34 => HostBufferFull
+/// 34 => ApiError::DeploymentThreshold
+/// # );
+/// # show_and_check!(
+/// 35 => ApiError::InsufficientTotalWeight
+/// # );
+/// # show_and_check!(
+/// 36 => ApiError::InvalidSystemContract
+/// # );
+/// # show_and_check!(
+/// 37 => ApiError::PurseNotCreated
+/// # );
+/// # show_and_check!(
+/// 38 => ApiError::Unhandled
+/// # );
+/// # show_and_check!(
+/// 39 => ApiError::BufferTooSmall
+/// # );
+/// # show_and_check!(
+/// 40 => ApiError::HostBufferEmpty
+/// # );
+/// # show_and_check!(
+/// 41 => ApiError::HostBufferFull
+/// # );
+/// # show_and_check!(
+/// 42 => ApiError::AllocLayout
 /// # );
 ///
 /// // Mint errors:
@@ -355,14 +379,33 @@ pub enum ApiError {
     NoAccessRights,
     /// A given type could not be constructed from a [`CLValue`](crate::CLValue).
     CLTypeMismatch,
-    /// Early end of stream while deserializing.
-    EarlyEndOfStream,
-    /// Formatting error while deserializing.
-    Formatting,
-    /// Not all input bytes were consumed in [`deserialize`](crate::bytesrepr::deserialize).
-    LeftOverBytes,
-    /// Out of memory error.
-    OutOfMemory,
+    /// Returned if trying to serialize a type with more than 255 discriminants (e.g. a struct with
+    /// too many fields, an enum with too many variants).
+    EncodingExcessiveDiscriminants,
+    /// Returned if input slice to deserializer is too short.
+    EncodingEndOfSlice,
+    /// Returned if input slice has remaining bytes after deserialization complete.
+    EncodingLeftOverBytes,
+    /// Returned if the deserializer attempts to deserialize a string that is not valid UTF-8.
+    EncodingInvalidUtf8,
+    /// Returned if the deserializer attempts to deserialize a bool that was not encoded as either
+    /// `1` or `0`.
+    EncodingInvalidBool,
+    /// Returned if the deserializer attempts to deserialize a char that is not in the correct
+    /// format.
+    EncodingInvalidChar,
+    /// Returned if the deserializer attempts to deserialize the tag of an enum that is not in the
+    /// expected ranges.
+    EncodingInvalidTag,
+    /// Type to be serialized (e.g. `f32`) or serde method (e.g. `deserialize_any`) is unsupported.
+    EncodingUnsupported,
+    /// If (de)serializing a message takes more than the provided size limit, this error is
+    /// returned.
+    EncodingSizeLimit,
+    /// Sequences of unknown length (like iterators) cannot be encoded.
+    EncodingSequenceMustHaveLength,
+    /// A custom error from Serde.
+    EncodingCustom,
     /// There are already [`MAX_ASSOCIATED_KEYS`](crate::account::MAX_ASSOCIATED_KEYS)
     /// [`PublicKey`](crate::account::PublicKey)s associated with the given account.
     MaxKeysLimit,
@@ -409,13 +452,20 @@ pub enum ApiError {
     User(u16),
 }
 
-impl From<bytesrepr::Error> for ApiError {
-    fn from(error: bytesrepr::Error) -> Self {
+impl From<encoding::Error> for ApiError {
+    fn from(error: encoding::Error) -> Self {
         match error {
-            bytesrepr::Error::EarlyEndOfStream => ApiError::EarlyEndOfStream,
-            bytesrepr::Error::Formatting => ApiError::Formatting,
-            bytesrepr::Error::LeftOverBytes => ApiError::LeftOverBytes,
-            bytesrepr::Error::OutOfMemory => ApiError::OutOfMemory,
+            encoding::Error::ExcessiveDiscriminants => ApiError::EncodingExcessiveDiscriminants,
+            encoding::Error::EndOfSlice => ApiError::EncodingEndOfSlice,
+            encoding::Error::LeftOverBytes(_) => ApiError::EncodingLeftOverBytes,
+            encoding::Error::InvalidUtf8Encoding(_) => ApiError::EncodingInvalidUtf8,
+            encoding::Error::InvalidBoolEncoding(_) => ApiError::EncodingInvalidBool,
+            encoding::Error::InvalidCharEncoding => ApiError::EncodingInvalidChar,
+            encoding::Error::InvalidTagEncoding(_) => ApiError::EncodingInvalidTag,
+            encoding::Error::Unsupported => ApiError::EncodingUnsupported,
+            encoding::Error::SizeLimit => ApiError::EncodingSizeLimit,
+            encoding::Error::SequenceMustHaveLength => ApiError::EncodingSequenceMustHaveLength,
+            encoding::Error::Custom(_) => ApiError::EncodingCustom,
         }
     }
 }
@@ -515,25 +565,32 @@ impl From<ApiError> for u32 {
             ApiError::Transfer => 14,
             ApiError::NoAccessRights => 15,
             ApiError::CLTypeMismatch => 16,
-            ApiError::EarlyEndOfStream => 17,
-            ApiError::Formatting => 18,
-            ApiError::LeftOverBytes => 19,
-            ApiError::OutOfMemory => 20,
-            ApiError::MaxKeysLimit => 21,
-            ApiError::DuplicateKey => 22,
-            ApiError::PermissionDenied => 23,
-            ApiError::MissingKey => 24,
-            ApiError::ThresholdViolation => 25,
-            ApiError::KeyManagementThreshold => 26,
-            ApiError::DeploymentThreshold => 27,
-            ApiError::InsufficientTotalWeight => 28,
-            ApiError::InvalidSystemContract => 29,
-            ApiError::PurseNotCreated => 30,
-            ApiError::Unhandled => 31,
-            ApiError::BufferTooSmall => 32,
-            ApiError::HostBufferEmpty => 33,
-            ApiError::HostBufferFull => 34,
-            ApiError::AllocLayout => 35,
+            ApiError::EncodingExcessiveDiscriminants => 17,
+            ApiError::EncodingEndOfSlice => 18,
+            ApiError::EncodingLeftOverBytes => 19,
+            ApiError::EncodingInvalidUtf8 => 20,
+            ApiError::EncodingInvalidBool => 21,
+            ApiError::EncodingInvalidChar => 22,
+            ApiError::EncodingInvalidTag => 23,
+            ApiError::EncodingUnsupported => 24,
+            ApiError::EncodingSizeLimit => 25,
+            ApiError::EncodingSequenceMustHaveLength => 26,
+            ApiError::EncodingCustom => 27,
+            ApiError::MaxKeysLimit => 28,
+            ApiError::DuplicateKey => 29,
+            ApiError::PermissionDenied => 30,
+            ApiError::MissingKey => 31,
+            ApiError::ThresholdViolation => 32,
+            ApiError::KeyManagementThreshold => 33,
+            ApiError::DeploymentThreshold => 34,
+            ApiError::InsufficientTotalWeight => 35,
+            ApiError::InvalidSystemContract => 36,
+            ApiError::PurseNotCreated => 37,
+            ApiError::Unhandled => 38,
+            ApiError::BufferTooSmall => 39,
+            ApiError::HostBufferEmpty => 40,
+            ApiError::HostBufferFull => 41,
+            ApiError::AllocLayout => 42,
             ApiError::Mint(value) => MINT_ERROR_OFFSET + u32::from(value),
             ApiError::ProofOfStake(value) => POS_ERROR_OFFSET + u32::from(value),
             ApiError::User(value) => RESERVED_ERROR_MAX + 1 + u32::from(value),
@@ -560,25 +617,32 @@ impl From<u32> for ApiError {
             14 => ApiError::Transfer,
             15 => ApiError::NoAccessRights,
             16 => ApiError::CLTypeMismatch,
-            17 => ApiError::EarlyEndOfStream,
-            18 => ApiError::Formatting,
-            19 => ApiError::LeftOverBytes,
-            20 => ApiError::OutOfMemory,
-            21 => ApiError::MaxKeysLimit,
-            22 => ApiError::DuplicateKey,
-            23 => ApiError::PermissionDenied,
-            24 => ApiError::MissingKey,
-            25 => ApiError::ThresholdViolation,
-            26 => ApiError::KeyManagementThreshold,
-            27 => ApiError::DeploymentThreshold,
-            28 => ApiError::InsufficientTotalWeight,
-            29 => ApiError::InvalidSystemContract,
-            30 => ApiError::PurseNotCreated,
-            31 => ApiError::Unhandled,
-            32 => ApiError::BufferTooSmall,
-            33 => ApiError::HostBufferEmpty,
-            34 => ApiError::HostBufferFull,
-            35 => ApiError::AllocLayout,
+            17 => ApiError::EncodingExcessiveDiscriminants,
+            18 => ApiError::EncodingEndOfSlice,
+            19 => ApiError::EncodingLeftOverBytes,
+            20 => ApiError::EncodingInvalidUtf8,
+            21 => ApiError::EncodingInvalidBool,
+            22 => ApiError::EncodingInvalidChar,
+            23 => ApiError::EncodingInvalidTag,
+            24 => ApiError::EncodingUnsupported,
+            25 => ApiError::EncodingSizeLimit,
+            26 => ApiError::EncodingSequenceMustHaveLength,
+            27 => ApiError::EncodingCustom,
+            28 => ApiError::MaxKeysLimit,
+            29 => ApiError::DuplicateKey,
+            30 => ApiError::PermissionDenied,
+            31 => ApiError::MissingKey,
+            32 => ApiError::ThresholdViolation,
+            33 => ApiError::KeyManagementThreshold,
+            34 => ApiError::DeploymentThreshold,
+            35 => ApiError::InsufficientTotalWeight,
+            36 => ApiError::InvalidSystemContract,
+            37 => ApiError::PurseNotCreated,
+            38 => ApiError::Unhandled,
+            39 => ApiError::BufferTooSmall,
+            40 => ApiError::HostBufferEmpty,
+            41 => ApiError::HostBufferFull,
+            42 => ApiError::AllocLayout,
             USER_ERROR_MIN..=USER_ERROR_MAX => ApiError::User(value as u16),
             POS_ERROR_MIN..=POS_ERROR_MAX => ApiError::ProofOfStake(value as u8),
             MINT_ERROR_MIN..=MINT_ERROR_MAX => ApiError::Mint(value as u8),
@@ -608,10 +672,21 @@ impl Debug for ApiError {
             ApiError::Transfer => write!(f, "ApiError::Transfer")?,
             ApiError::NoAccessRights => write!(f, "ApiError::NoAccessRights")?,
             ApiError::CLTypeMismatch => write!(f, "ApiError::CLTypeMismatch")?,
-            ApiError::EarlyEndOfStream => write!(f, "ApiError::EarlyEndOfStream")?,
-            ApiError::Formatting => write!(f, "ApiError::Formatting")?,
-            ApiError::LeftOverBytes => write!(f, "ApiError::LeftOverBytes")?,
-            ApiError::OutOfMemory => write!(f, "ApiError::OutOfMemory")?,
+            ApiError::EncodingExcessiveDiscriminants => {
+                write!(f, "ApiError::EncodingExcessiveDiscriminants")?
+            }
+            ApiError::EncodingEndOfSlice => write!(f, "ApiError::EncodingEndOfSlice")?,
+            ApiError::EncodingLeftOverBytes => write!(f, "ApiError::EncodingLeftOverBytes")?,
+            ApiError::EncodingInvalidUtf8 => write!(f, "ApiError::EncodingInvalidUtf8")?,
+            ApiError::EncodingInvalidBool => write!(f, "ApiError::EncodingInvalidBool")?,
+            ApiError::EncodingInvalidChar => write!(f, "ApiError::EncodingInvalidChar")?,
+            ApiError::EncodingInvalidTag => write!(f, "ApiError::EncodingInvalidTag")?,
+            ApiError::EncodingUnsupported => write!(f, "ApiError::EncodingUnsupported")?,
+            ApiError::EncodingSizeLimit => write!(f, "ApiError::EncodingSizeLimit")?,
+            ApiError::EncodingSequenceMustHaveLength => {
+                write!(f, "ApiError::EncodingSequenceMustHaveLength")?
+            }
+            ApiError::EncodingCustom => write!(f, "ApiError::EncodingCustom")?,
             ApiError::MaxKeysLimit => write!(f, "ApiError::MaxKeysLimit")?,
             ApiError::DuplicateKey => write!(f, "ApiError::DuplicateKey")?,
             ApiError::PermissionDenied => write!(f, "ApiError::PermissionDenied")?,
@@ -741,10 +816,17 @@ mod tests {
         round_trip(Err(ApiError::Transfer));
         round_trip(Err(ApiError::NoAccessRights));
         round_trip(Err(ApiError::CLTypeMismatch));
-        round_trip(Err(ApiError::EarlyEndOfStream));
-        round_trip(Err(ApiError::Formatting));
-        round_trip(Err(ApiError::LeftOverBytes));
-        round_trip(Err(ApiError::OutOfMemory));
+        round_trip(Err(ApiError::EncodingExcessiveDiscriminants));
+        round_trip(Err(ApiError::EncodingEndOfSlice));
+        round_trip(Err(ApiError::EncodingLeftOverBytes));
+        round_trip(Err(ApiError::EncodingInvalidUtf8));
+        round_trip(Err(ApiError::EncodingInvalidBool));
+        round_trip(Err(ApiError::EncodingInvalidChar));
+        round_trip(Err(ApiError::EncodingInvalidTag));
+        round_trip(Err(ApiError::EncodingUnsupported));
+        round_trip(Err(ApiError::EncodingSizeLimit));
+        round_trip(Err(ApiError::EncodingSequenceMustHaveLength));
+        round_trip(Err(ApiError::EncodingCustom));
         round_trip(Err(ApiError::MaxKeysLimit));
         round_trip(Err(ApiError::DuplicateKey));
         round_trip(Err(ApiError::PermissionDenied));

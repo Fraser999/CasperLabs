@@ -8,11 +8,11 @@ mod write;
 use std::{collections::HashMap, convert};
 
 use lmdb::DatabaseFlags;
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use tempfile::{tempdir, TempDir};
 
 use engine_shared::newtypes::{Blake2bHash, CorrelationId};
-use types::bytesrepr::{self, FromBytes, ToBytes};
+use types::encoding;
 
 use crate::{
     error::{self, in_memory},
@@ -37,49 +37,11 @@ const TEST_KEY_LENGTH: usize = 7;
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 struct TestKey([u8; TEST_KEY_LENGTH]);
 
-impl ToBytes for TestKey {
-    fn to_bytes(&self) -> Result<Vec<u8>, bytesrepr::Error> {
-        Ok(self.0.to_vec())
-    }
-
-    fn serialized_length(&self) -> usize {
-        TEST_KEY_LENGTH
-    }
-}
-
-impl FromBytes for TestKey {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), bytesrepr::Error> {
-        let (key, rem) = bytes.split_at(TEST_KEY_LENGTH);
-        let mut ret = [0u8; TEST_KEY_LENGTH];
-        ret.copy_from_slice(key);
-        Ok((TestKey(ret), rem))
-    }
-}
-
 const TEST_VAL_LENGTH: usize = 6;
 
 /// A short value type for tests.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 struct TestValue([u8; TEST_VAL_LENGTH]);
-
-impl ToBytes for TestValue {
-    fn to_bytes(&self) -> Result<Vec<u8>, bytesrepr::Error> {
-        Ok(self.0.to_vec())
-    }
-
-    fn serialized_length(&self) -> usize {
-        TEST_VAL_LENGTH
-    }
-}
-
-impl FromBytes for TestValue {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), bytesrepr::Error> {
-        let (key, rem) = bytes.split_at(TEST_VAL_LENGTH);
-        let mut ret = [0u8; TEST_VAL_LENGTH];
-        ret.copy_from_slice(key);
-        Ok((TestValue(ret), rem))
-    }
-}
 
 type TestTrie = Trie<TestKey, TestValue>;
 
@@ -92,9 +54,9 @@ struct HashedTrie<K, V> {
     trie: Trie<K, V>,
 }
 
-impl<K: ToBytes, V: ToBytes> HashedTrie<K, V> {
-    pub fn new(trie: Trie<K, V>) -> Result<Self, bytesrepr::Error> {
-        let trie_bytes = trie.to_bytes()?;
+impl<K: Serialize, V: Serialize> HashedTrie<K, V> {
+    pub fn new(trie: Trie<K, V>) -> Result<Self, encoding::Error> {
+        let trie_bytes = encoding::serialize(&trie)?;
         let hash = Blake2bHash::new(&trie_bytes);
         Ok(HashedTrie { hash, trie })
     }
@@ -214,7 +176,7 @@ const TEST_LEAVES_ADJACENTS: [TestTrie; TEST_LEAVES_LENGTH] = [
     },
 ];
 
-type TrieGenerator<K, V> = fn() -> Result<(Blake2bHash, Vec<HashedTrie<K, V>>), bytesrepr::Error>;
+type TrieGenerator<K, V> = fn() -> Result<(Blake2bHash, Vec<HashedTrie<K, V>>), encoding::Error>;
 
 const TEST_TRIE_GENERATORS_LENGTH: usize = 7;
 
@@ -228,14 +190,14 @@ const TEST_TRIE_GENERATORS: [TrieGenerator<TestKey, TestValue>; TEST_TRIE_GENERA
     create_6_leaf_trie,
 ];
 
-fn hash_test_tries(tries: &[TestTrie]) -> Result<Vec<HashedTestTrie>, bytesrepr::Error> {
+fn hash_test_tries(tries: &[TestTrie]) -> Result<Vec<HashedTestTrie>, encoding::Error> {
     tries
         .iter()
         .map(|trie| HashedTestTrie::new(trie.to_owned()))
         .collect()
 }
 
-fn create_0_leaf_trie() -> Result<(Blake2bHash, Vec<HashedTestTrie>), bytesrepr::Error> {
+fn create_0_leaf_trie() -> Result<(Blake2bHash, Vec<HashedTestTrie>), encoding::Error> {
     let root = HashedTrie::new(Trie::node(&[]))?;
 
     let root_hash: Blake2bHash = root.hash;
@@ -251,7 +213,7 @@ fn create_0_leaf_trie() -> Result<(Blake2bHash, Vec<HashedTestTrie>), bytesrepr:
     Ok((root_hash, tries))
 }
 
-fn create_1_leaf_trie() -> Result<(Blake2bHash, Vec<HashedTestTrie>), bytesrepr::Error> {
+fn create_1_leaf_trie() -> Result<(Blake2bHash, Vec<HashedTestTrie>), encoding::Error> {
     let leaves = hash_test_tries(&TEST_LEAVES[..1])?;
 
     let root = HashedTrie::new(Trie::node(&[(0, Pointer::LeafPointer(leaves[0].hash))]))?;
@@ -270,7 +232,7 @@ fn create_1_leaf_trie() -> Result<(Blake2bHash, Vec<HashedTestTrie>), bytesrepr:
     Ok((root_hash, tries))
 }
 
-fn create_2_leaf_trie() -> Result<(Blake2bHash, Vec<HashedTestTrie>), bytesrepr::Error> {
+fn create_2_leaf_trie() -> Result<(Blake2bHash, Vec<HashedTestTrie>), encoding::Error> {
     let leaves = hash_test_tries(&TEST_LEAVES[..2])?;
 
     let node = HashedTrie::new(Trie::node(&[
@@ -299,7 +261,7 @@ fn create_2_leaf_trie() -> Result<(Blake2bHash, Vec<HashedTestTrie>), bytesrepr:
     Ok((root_hash, tries))
 }
 
-fn create_3_leaf_trie() -> Result<(Blake2bHash, Vec<HashedTestTrie>), bytesrepr::Error> {
+fn create_3_leaf_trie() -> Result<(Blake2bHash, Vec<HashedTestTrie>), encoding::Error> {
     let leaves = hash_test_tries(&TEST_LEAVES[..3])?;
 
     let node_1 = HashedTrie::new(Trie::node(&[
@@ -338,7 +300,7 @@ fn create_3_leaf_trie() -> Result<(Blake2bHash, Vec<HashedTestTrie>), bytesrepr:
     Ok((root_hash, tries))
 }
 
-fn create_4_leaf_trie() -> Result<(Blake2bHash, Vec<HashedTestTrie>), bytesrepr::Error> {
+fn create_4_leaf_trie() -> Result<(Blake2bHash, Vec<HashedTestTrie>), encoding::Error> {
     let leaves = hash_test_tries(&TEST_LEAVES[..4])?;
 
     let node_1 = HashedTrie::new(Trie::node(&[
@@ -382,7 +344,7 @@ fn create_4_leaf_trie() -> Result<(Blake2bHash, Vec<HashedTestTrie>), bytesrepr:
     Ok((root_hash, tries))
 }
 
-fn create_5_leaf_trie() -> Result<(Blake2bHash, Vec<HashedTestTrie>), bytesrepr::Error> {
+fn create_5_leaf_trie() -> Result<(Blake2bHash, Vec<HashedTestTrie>), encoding::Error> {
     let leaves = hash_test_tries(&TEST_LEAVES[..5])?;
 
     let node_1 = HashedTrie::new(Trie::node(&[
@@ -431,7 +393,7 @@ fn create_5_leaf_trie() -> Result<(Blake2bHash, Vec<HashedTestTrie>), bytesrepr:
     Ok((root_hash, tries))
 }
 
-fn create_6_leaf_trie() -> Result<(Blake2bHash, Vec<HashedTestTrie>), bytesrepr::Error> {
+fn create_6_leaf_trie() -> Result<(Blake2bHash, Vec<HashedTestTrie>), encoding::Error> {
     let leaves = hash_test_tries(&TEST_LEAVES)?;
 
     let node_1 = HashedTrie::new(Trie::node(&[
@@ -486,12 +448,12 @@ fn put_tries<'a, K, V, R, S, E>(
     tries: &[HashedTrie<K, V>],
 ) -> Result<(), E>
 where
-    K: ToBytes,
-    V: ToBytes,
+    K: Serialize,
+    V: Serialize,
     R: TransactionSource<'a, Handle = S::Handle>,
     S: TrieStore<K, V>,
     S::Error: From<R::Error>,
-    E: From<R::Error> + From<S::Error> + From<types::bytesrepr::Error>,
+    E: From<R::Error> + From<S::Error> + From<types::encoding::Error>,
 {
     if tries.is_empty() {
         return Ok(());
@@ -514,8 +476,8 @@ struct LmdbTestContext {
 impl LmdbTestContext {
     fn new<K, V>(tries: &[HashedTrie<K, V>]) -> Result<Self, failure::Error>
     where
-        K: FromBytes + ToBytes,
-        V: FromBytes + ToBytes,
+        K: DeserializeOwned + Serialize,
+        V: DeserializeOwned + Serialize,
     {
         let _temp_dir = tempdir()?;
         let environment = LmdbEnvironment::new(&_temp_dir.path().to_path_buf(), *TEST_MAP_SIZE)?;
@@ -530,8 +492,8 @@ impl LmdbTestContext {
 
     fn update<K, V>(&self, tries: &[HashedTrie<K, V>]) -> Result<(), failure::Error>
     where
-        K: ToBytes,
-        V: ToBytes,
+        K: Serialize,
+        V: Serialize,
     {
         put_tries::<_, _, _, _, error::Error>(&self.environment, &self.store, tries)?;
         Ok(())
@@ -547,8 +509,8 @@ struct InMemoryTestContext {
 impl InMemoryTestContext {
     fn new<K, V>(tries: &[HashedTrie<K, V>]) -> Result<Self, failure::Error>
     where
-        K: ToBytes,
-        V: ToBytes,
+        K: Serialize,
+        V: Serialize,
     {
         let environment = InMemoryEnvironment::new();
         let store = InMemoryTrieStore::new(&environment, None);
@@ -558,8 +520,8 @@ impl InMemoryTestContext {
 
     fn update<K, V>(&self, tries: &[HashedTrie<K, V>]) -> Result<(), failure::Error>
     where
-        K: ToBytes,
-        V: ToBytes,
+        K: Serialize,
+        V: Serialize,
     {
         put_tries::<_, _, _, _, in_memory::Error>(&self.environment, &self.store, tries)?;
         Ok(())
@@ -574,12 +536,12 @@ fn check_leaves_exist<K, V, T, S, E>(
     leaves: &[Trie<K, V>],
 ) -> Result<Vec<bool>, E>
 where
-    K: ToBytes + FromBytes + Eq + std::fmt::Debug,
-    V: ToBytes + FromBytes + Eq + Copy,
+    K: Serialize + DeserializeOwned + Eq + std::fmt::Debug,
+    V: Serialize + DeserializeOwned + Eq + Copy,
     T: Readable<Handle = S::Handle>,
     S: TrieStore<K, V>,
     S::Error: From<T::Error>,
-    E: From<S::Error> + From<types::bytesrepr::Error>,
+    E: From<S::Error> + From<types::encoding::Error>,
 {
     let mut ret = Vec::new();
 
@@ -603,12 +565,12 @@ fn check_keys<K, V, T, S, E>(
     leaves: &[Trie<K, V>],
 ) -> Result<bool, E>
 where
-    K: ToBytes + FromBytes + Eq + std::fmt::Debug + Clone + Ord,
-    V: ToBytes + FromBytes + Eq + std::fmt::Debug + Copy,
+    K: Serialize + DeserializeOwned + Eq + std::fmt::Debug + Clone + Ord,
+    V: Serialize + DeserializeOwned + Eq + std::fmt::Debug + Copy,
     T: Readable<Handle = S::Handle>,
     S: TrieStore<K, V>,
     S::Error: From<T::Error>,
-    E: From<S::Error> + From<types::bytesrepr::Error>,
+    E: From<S::Error> + From<types::encoding::Error>,
 {
     let expected = {
         let mut tmp = leaves
@@ -638,12 +600,12 @@ fn check_leaves<'a, K, V, R, S, E>(
     absent: &[Trie<K, V>],
 ) -> Result<(), E>
 where
-    K: ToBytes + FromBytes + Eq + std::fmt::Debug + Clone + Ord,
-    V: ToBytes + FromBytes + Eq + std::fmt::Debug + Copy,
+    K: Serialize + DeserializeOwned + Eq + std::fmt::Debug + Clone + Ord,
+    V: Serialize + DeserializeOwned + Eq + std::fmt::Debug + Copy,
     R: TransactionSource<'a, Handle = S::Handle>,
     S: TrieStore<K, V>,
     S::Error: From<R::Error>,
-    E: From<R::Error> + From<S::Error> + From<types::bytesrepr::Error>,
+    E: From<R::Error> + From<S::Error> + From<types::encoding::Error>,
 {
     let txn: R::ReadTransaction = environment.create_read_txn()?;
 
@@ -679,12 +641,12 @@ fn write_leaves<'a, K, V, R, S, E>(
     leaves: &[Trie<K, V>],
 ) -> Result<Vec<WriteResult>, E>
 where
-    K: ToBytes + FromBytes + Clone + Eq + std::fmt::Debug,
-    V: ToBytes + FromBytes + Clone + Eq,
+    K: Serialize + DeserializeOwned + Clone + Eq + std::fmt::Debug,
+    V: Serialize + DeserializeOwned + Clone + Eq,
     R: TransactionSource<'a, Handle = S::Handle>,
     S: TrieStore<K, V>,
     S::Error: From<R::Error>,
-    E: From<R::Error> + From<S::Error> + From<types::bytesrepr::Error>,
+    E: From<R::Error> + From<S::Error> + From<types::encoding::Error>,
 {
     let mut results = Vec::new();
     if leaves.is_empty() {
@@ -721,12 +683,12 @@ fn check_pairs<'a, K, V, R, S, E>(
     pairs: &[(K, V)],
 ) -> Result<bool, E>
 where
-    K: ToBytes + FromBytes + Eq + std::fmt::Debug + Clone + Ord,
-    V: ToBytes + FromBytes + Eq + std::fmt::Debug + Copy,
+    K: Serialize + DeserializeOwned + Eq + std::fmt::Debug + Clone + Ord,
+    V: Serialize + DeserializeOwned + Eq + std::fmt::Debug + Copy,
     R: TransactionSource<'a, Handle = S::Handle>,
     S: TrieStore<K, V>,
     S::Error: From<R::Error>,
-    E: From<R::Error> + From<S::Error> + From<types::bytesrepr::Error>,
+    E: From<R::Error> + From<S::Error> + From<types::encoding::Error>,
 {
     let txn = environment.create_read_txn()?;
     for (index, root_hash) in root_hashes.iter().enumerate() {
@@ -767,12 +729,12 @@ fn write_pairs<'a, K, V, R, S, E>(
     pairs: &[(K, V)],
 ) -> Result<Vec<Blake2bHash>, E>
 where
-    K: ToBytes + FromBytes + Clone + Eq + std::fmt::Debug,
-    V: ToBytes + FromBytes + Clone + Eq,
+    K: Serialize + DeserializeOwned + Clone + Eq + std::fmt::Debug,
+    V: Serialize + DeserializeOwned + Clone + Eq,
     R: TransactionSource<'a, Handle = S::Handle>,
     S: TrieStore<K, V>,
     S::Error: From<R::Error>,
-    E: From<R::Error> + From<S::Error> + From<types::bytesrepr::Error>,
+    E: From<R::Error> + From<S::Error> + From<types::encoding::Error>,
 {
     let mut results = Vec::new();
     if pairs.is_empty() {
@@ -803,12 +765,12 @@ fn writes_to_n_leaf_empty_trie_had_expected_results<'a, K, V, R, S, E>(
     test_leaves: &[Trie<K, V>],
 ) -> Result<Vec<Blake2bHash>, E>
 where
-    K: ToBytes + FromBytes + Clone + Eq + std::fmt::Debug + Ord,
-    V: ToBytes + FromBytes + Clone + Eq + std::fmt::Debug + Copy,
+    K: Serialize + DeserializeOwned + Clone + Eq + std::fmt::Debug + Ord,
+    V: Serialize + DeserializeOwned + Clone + Eq + std::fmt::Debug + Copy,
     R: TransactionSource<'a, Handle = S::Handle>,
     S: TrieStore<K, V>,
     S::Error: From<R::Error>,
-    E: From<R::Error> + From<S::Error> + From<types::bytesrepr::Error>,
+    E: From<R::Error> + From<S::Error> + From<types::encoding::Error>,
 {
     let mut states = states.to_vec();
 
@@ -845,8 +807,8 @@ impl InMemoryEnvironment {
         maybe_name: Option<&str>,
     ) -> Result<HashMap<Blake2bHash, Trie<K, V>>, in_memory::Error>
     where
-        K: FromBytes,
-        V: FromBytes,
+        K: DeserializeOwned,
+        V: DeserializeOwned,
     {
         let name = maybe_name
             .map(|name| format!("{}-{}", trie_store::NAME, name))
@@ -854,11 +816,11 @@ impl InMemoryEnvironment {
         let data = self.data(Some(&name))?.unwrap();
         data.into_iter()
             .map(|(hash_bytes, trie_bytes)| {
-                let hash: Blake2bHash = bytesrepr::deserialize(hash_bytes.to_vec())?;
-                let trie: Trie<K, V> = bytesrepr::deserialize(trie_bytes.to_vec())?;
+                let hash: Blake2bHash = encoding::deserialize(&hash_bytes)?;
+                let trie: Trie<K, V> = encoding::deserialize(&trie_bytes)?;
                 Ok((hash, trie))
             })
-            .collect::<Result<HashMap<Blake2bHash, Trie<K, V>>, bytesrepr::Error>>()
+            .collect::<Result<HashMap<Blake2bHash, Trie<K, V>>, encoding::Error>>()
             .map_err(Into::into)
     }
 }

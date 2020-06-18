@@ -1,9 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use types::{
-    account::{ActionType, SetThresholdFailure, Weight, WEIGHT_SERIALIZED_LENGTH},
-    bytesrepr::{self, Error, FromBytes, ToBytes},
-};
+use types::account::{ActionType, SetThresholdFailure, Weight};
 
 /// Thresholds that have to be met when executing an action of a certain type.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -91,31 +88,6 @@ impl Default for ActionThresholds {
     }
 }
 
-impl ToBytes for ActionThresholds {
-    fn to_bytes(&self) -> Result<Vec<u8>, Error> {
-        let mut result = bytesrepr::unchecked_allocate_buffer(self);
-        result.append(&mut self.deployment.to_bytes()?);
-        result.append(&mut self.key_management.to_bytes()?);
-        Ok(result)
-    }
-
-    fn serialized_length(&self) -> usize {
-        2 * WEIGHT_SERIALIZED_LENGTH
-    }
-}
-
-impl FromBytes for ActionThresholds {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), Error> {
-        let (deployment, rem) = Weight::from_bytes(&bytes)?;
-        let (key_management, rem) = Weight::from_bytes(&rem)?;
-        let ret = ActionThresholds {
-            deployment,
-            key_management,
-        };
-        Ok((ret, rem))
-    }
-}
-
 pub mod gens {
     use proptest::prelude::*;
 
@@ -129,6 +101,8 @@ pub mod gens {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use types::encoding;
 
     #[test]
     fn should_create_new_action_thresholds() {
@@ -146,6 +120,6 @@ mod tests {
     #[test]
     fn serialization_roundtrip() {
         let action_thresholds = ActionThresholds::new(Weight::new(1), Weight::new(42)).unwrap();
-        bytesrepr::test_serialization_roundtrip(&action_thresholds);
+        encoding::test_serialization_roundtrip(&action_thresholds);
     }
 }

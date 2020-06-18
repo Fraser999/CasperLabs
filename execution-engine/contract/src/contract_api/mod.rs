@@ -11,7 +11,9 @@ use alloc::{
 };
 use core::{mem, ptr::NonNull};
 
-use casperlabs_types::{bytesrepr::ToBytes, ApiError};
+use serde::Serialize;
+
+use casperlabs_types::{encoding, ApiError};
 
 use crate::unwrap_or_revert::UnwrapOrRevert;
 
@@ -29,12 +31,12 @@ fn alloc_bytes(n: usize) -> NonNull<u8> {
         .unwrap_or_revert();
     let raw_ptr = unsafe { alloc(layout) };
     NonNull::new(raw_ptr)
-        .ok_or(ApiError::OutOfMemory)
+        .ok_or(ApiError::EncodingSizeLimit)
         .unwrap_or_revert()
 }
 
-fn to_ptr<T: ToBytes>(t: T) -> (*const u8, usize, Vec<u8>) {
-    let bytes = t.into_bytes().unwrap_or_revert();
+fn to_ptr<T: Serialize>(t: T) -> (*const u8, usize, Vec<u8>) {
+    let bytes = encoding::serialize(&t).unwrap_or_revert();
     let ptr = bytes.as_ptr();
     let size = bytes.len();
     (ptr, size, bytes)

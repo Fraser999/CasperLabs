@@ -9,7 +9,7 @@ use engine_test_support::{
     },
     DEFAULT_ACCOUNT_ADDR,
 };
-use types::{account::PublicKey, bytesrepr::ToBytes, CLValue, Key, U512};
+use types::{account::PublicKey, encoding, CLValue, Key, U512};
 
 const ACCOUNT_1_ADDR: PublicKey = PublicKey::ed25519_from([42u8; 32]);
 const DO_NOTHING_WASM: &str = "do_nothing.wasm";
@@ -81,10 +81,8 @@ fn should_charge_non_main_purse() {
     let purse = purse_key.into_uref().expect("should have uref");
 
     let purse_starting_balance = {
-        let purse_bytes = purse
-            .addr()
-            .to_bytes()
-            .expect("should be able to serialize purse bytes");
+        let purse_bytes =
+            encoding::serialize(&purse.addr()).expect("should be able to serialize purse bytes");
 
         let mint = builder.get_mint_contract_uref();
         let balance_mapping_key = Key::local(mint.addr(), &purse_bytes);
@@ -143,10 +141,8 @@ fn should_charge_non_main_purse() {
     let expected_resting_balance = account_1_purse_funding_amount - motes.value();
 
     let purse_final_balance = {
-        let purse_bytes = purse
-            .addr()
-            .to_bytes()
-            .expect("should be able to serialize purse bytes");
+        let purse_bytes =
+            encoding::serialize(&purse.addr()).expect("should be able to serialize purse bytes");
 
         let mint = builder.get_mint_contract_uref();
         let balance_mapping_key = Key::local(mint.addr(), &purse_bytes);

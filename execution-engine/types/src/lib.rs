@@ -27,7 +27,6 @@ mod access_rights;
 pub mod account;
 pub mod api_error;
 mod block_time;
-pub mod bytesrepr;
 mod cl_type;
 mod cl_value;
 mod contract_ref;
@@ -45,7 +44,7 @@ mod uint;
 mod uref;
 
 pub use crate::uint::{UIntParseError, U128, U256, U512};
-pub use access_rights::{AccessRights, ACCESS_RIGHTS_SERIALIZED_LENGTH};
+pub use access_rights::AccessRights;
 #[doc(inline)]
 pub use api_error::ApiError;
 pub use block_time::{BlockTime, BLOCKTIME_SERIALIZED_LENGTH};

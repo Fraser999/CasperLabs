@@ -3,7 +3,7 @@ mod proptests;
 mod simple;
 
 use engine_shared::newtypes::Blake2bHash;
-use types::bytesrepr::ToBytes;
+use types::encoding;
 
 use crate::trie::{Pointer, PointerBlock, Trie};
 
@@ -30,9 +30,9 @@ fn create_data() -> Vec<TestData<Vec<u8>, Vec<u8>>> {
         value: b"val_3".to_vec(),
     };
 
-    let leaf_1_hash = Blake2bHash::new(&leaf_1.to_bytes().unwrap());
-    let leaf_2_hash = Blake2bHash::new(&leaf_2.to_bytes().unwrap());
-    let leaf_3_hash = Blake2bHash::new(&leaf_3.to_bytes().unwrap());
+    let leaf_1_hash = Blake2bHash::new(&encoding::serialize(&leaf_1).unwrap());
+    let leaf_2_hash = Blake2bHash::new(&encoding::serialize(&leaf_2).unwrap());
+    let leaf_3_hash = Blake2bHash::new(&encoding::serialize(&leaf_3).unwrap());
 
     let node_2: Trie<Vec<u8>, Vec<u8>> = {
         let mut pointer_block = PointerBlock::new();
@@ -42,7 +42,7 @@ fn create_data() -> Vec<TestData<Vec<u8>, Vec<u8>>> {
         Trie::Node { pointer_block }
     };
 
-    let node_2_hash = Blake2bHash::new(&node_2.to_bytes().unwrap());
+    let node_2_hash = Blake2bHash::new(&encoding::serialize(&node_2).unwrap());
 
     let ext_node: Trie<Vec<u8>, Vec<u8>> = {
         let affix = vec![1u8, 0];
@@ -50,7 +50,7 @@ fn create_data() -> Vec<TestData<Vec<u8>, Vec<u8>>> {
         Trie::Extension { affix, pointer }
     };
 
-    let ext_node_hash = Blake2bHash::new(&ext_node.to_bytes().unwrap());
+    let ext_node_hash = Blake2bHash::new(&encoding::serialize(&ext_node).unwrap());
 
     let node_1: Trie<Vec<u8>, Vec<u8>> = {
         let mut pointer_block = PointerBlock::new();
@@ -60,7 +60,7 @@ fn create_data() -> Vec<TestData<Vec<u8>, Vec<u8>>> {
         Trie::Node { pointer_block }
     };
 
-    let node_1_hash = Blake2bHash::new(&node_1.to_bytes().unwrap());
+    let node_1_hash = Blake2bHash::new(&encoding::serialize(&node_1).unwrap());
 
     vec![
         TestData(leaf_1_hash, leaf_1),

@@ -14,6 +14,7 @@ use std::{
 
 use itertools::Itertools;
 use parity_wasm::elements::Module;
+use serde::de::DeserializeOwned;
 use wasmi::{ImportsBuilder, MemoryRef, ModuleInstance, ModuleRef, Trap, TrapKind};
 
 use ::mint::Mint;
@@ -24,8 +25,7 @@ use proof_of_stake::ProofOfStake;
 use standard_payment::StandardPayment;
 use types::{
     account::{ActionType, PublicKey, Weight},
-    bytesrepr::{self, FromBytes, ToBytes},
-    system_contract_errors,
+    encoding, system_contract_errors,
     system_contract_errors::mint,
     AccessRights, ApiError, CLType, CLTyped, CLValue, Key, ProtocolVersion, SystemContractType,
     TransferResult, TransferredTo, URef, U128, U256, U512,
@@ -132,6 +132,40 @@ pub fn extract_access_rights_from_keys<I: IntoIterator<Item = Key>>(
             )
         })
         .collect()
+}
+
+mod extract_uref_helpers {
+    use serde::{de::DeserializeOwned, Deserialize, Serialize};
+    use serde_big_array::big_array;
+
+    use types::{CLType, CLTyped, Key, URef};
+
+    big_array! { BigArray; }
+
+    macro_rules! impl_array_helper {
+        ($($N:literal $name:ident)+) => {
+            $(
+                #[derive(Serialize, Deserialize)]
+                pub(super) struct $name<T>(#[serde(with = "BigArray")] pub [T; 64])
+                where
+                    T: Default + Copy + Serialize + DeserializeOwned;
+
+                impl CLTyped for $name<URef> {
+                    fn cl_type() -> CLType {
+                        CLType::FixedList(Box::new(CLType::URef), $N as u32)
+                    }
+                }
+
+                impl CLTyped for $name<Key> {
+                    fn cl_type() -> CLType {
+                        CLType::FixedList(Box::new(CLType::Key), $N as u32)
+                    }
+                }
+            )+
+        }
+    }
+
+    impl_array_helper! { 64 Array64 128 Array128 256 Array256 512 Array512 }
 }
 
 #[allow(clippy::cognitive_complexity)]
@@ -522,45 +556,45 @@ fn extract_urefs(cl_value: &CLValue) -> Result<Vec<URef>, Error> {
         },
         CLType::FixedList(ty, 64) => match **ty {
             CLType::URef => {
-                let arr: [URef; 64] = cl_value.to_owned().into_t()?;
-                Ok(arr.to_vec())
+                let arr: extract_uref_helpers::Array64<URef> = cl_value.to_owned().into_t()?;
+                Ok(arr.0.to_vec())
             }
             CLType::Key => {
-                let arr: [Key; 64] = cl_value.to_owned().into_t()?;
-                Ok(arr.iter().filter_map(Key::as_uref).cloned().collect())
+                let arr: extract_uref_helpers::Array64<Key> = cl_value.to_owned().into_t()?;
+                Ok(arr.0.iter().filter_map(Key::as_uref).cloned().collect())
             }
             _ => Ok(vec![]),
         },
         CLType::FixedList(ty, 128) => match **ty {
             CLType::URef => {
-                let arr: [URef; 128] = cl_value.to_owned().into_t()?;
-                Ok(arr.to_vec())
+                let arr: extract_uref_helpers::Array128<URef> = cl_value.to_owned().into_t()?;
+                Ok(arr.0.to_vec())
             }
             CLType::Key => {
-                let arr: [Key; 128] = cl_value.to_owned().into_t()?;
-                Ok(arr.iter().filter_map(Key::as_uref).cloned().collect())
+                let arr: extract_uref_helpers::Array128<Key> = cl_value.to_owned().into_t()?;
+                Ok(arr.0.iter().filter_map(Key::as_uref).cloned().collect())
             }
             _ => Ok(vec![]),
         },
         CLType::FixedList(ty, 256) => match **ty {
             CLType::URef => {
-                let arr: [URef; 256] = cl_value.to_owned().into_t()?;
-                Ok(arr.to_vec())
+                let arr: extract_uref_helpers::Array256<URef> = cl_value.to_owned().into_t()?;
+                Ok(arr.0.to_vec())
             }
             CLType::Key => {
-                let arr: [Key; 256] = cl_value.to_owned().into_t()?;
-                Ok(arr.iter().filter_map(Key::as_uref).cloned().collect())
+                let arr: extract_uref_helpers::Array256<Key> = cl_value.to_owned().into_t()?;
+                Ok(arr.0.iter().filter_map(Key::as_uref).cloned().collect())
             }
             _ => Ok(vec![]),
         },
         CLType::FixedList(ty, 512) => match **ty {
             CLType::URef => {
-                let arr: [URef; 512] = cl_value.to_owned().into_t()?;
-                Ok(arr.to_vec())
+                let arr: extract_uref_helpers::Array512<URef> = cl_value.to_owned().into_t()?;
+                Ok(arr.0.to_vec())
             }
             CLType::Key => {
-                let arr: [Key; 512] = cl_value.to_owned().into_t()?;
-                Ok(arr.iter().filter_map(Key::as_uref).cloned().collect())
+                let arr: extract_uref_helpers::Array512<Key> = cl_value.to_owned().into_t()?;
+                Ok(arr.0.iter().filter_map(Key::as_uref).cloned().collect())
             }
             _ => Ok(vec![]),
         },
@@ -1412,7 +1446,7 @@ where
     /// Reads key (defined as `key_ptr` and `key_size` tuple) from Wasm memory.
     fn key_from_mem(&mut self, key_ptr: u32, key_size: u32) -> Result<Key, Error> {
         let bytes = self.bytes_from_mem(key_ptr, key_size as usize)?;
-        bytesrepr::deserialize(bytes).map_err(Into::into)
+        encoding::deserialize(&bytes).map_err(Into::into)
     }
 
     /// Reads `CLValue` (defined as `cl_value_ptr` and `cl_value_size` tuple) from Wasm memory.
@@ -1422,12 +1456,12 @@ where
         cl_value_size: u32,
     ) -> Result<CLValue, Error> {
         let bytes = self.bytes_from_mem(cl_value_ptr, cl_value_size as usize)?;
-        bytesrepr::deserialize(bytes).map_err(Into::into)
+        encoding::deserialize(&bytes).map_err(Into::into)
     }
 
     fn string_from_mem(&self, ptr: u32, size: u32) -> Result<String, Trap> {
         let bytes = self.bytes_from_mem(ptr, size as usize)?;
-        bytesrepr::deserialize(bytes).map_err(|e| Error::BytesRepr(e).into())
+        encoding::deserialize(&bytes).map_err(|e| Error::Encoding(e).into())
     }
 
     fn get_function_by_name(&mut self, name_ptr: u32, name_size: u32) -> Result<Vec<u8>, Trap> {
@@ -1459,14 +1493,14 @@ where
 
     fn is_valid_uref(&mut self, uref_ptr: u32, uref_size: u32) -> Result<bool, Trap> {
         let bytes = self.bytes_from_mem(uref_ptr, uref_size as usize)?;
-        let uref: URef = bytesrepr::deserialize(bytes).map_err(Error::BytesRepr)?;
+        let uref: URef = encoding::deserialize(&bytes).map_err(Error::Encoding)?;
         Ok(self.context.validate_uref(&uref).is_ok())
     }
 
     fn get_arg_size(&mut self, index: usize, size_ptr: u32) -> Result<Result<(), ApiError>, Trap> {
         let arg_size = match self.context.args().get(index) {
             Some(arg) if arg.inner_bytes().len() > u32::max_value() as usize => {
-                return Ok(Err(ApiError::OutOfMemory))
+                return Ok(Err(ApiError::EncodingSizeLimit))
             }
             None => return Ok(Err(ApiError::MissingArgument)),
             Some(arg) => arg.inner_bytes().len() as u32,
@@ -1493,7 +1527,7 @@ where
         };
 
         if arg.inner_bytes().len() > output_size {
-            return Ok(Err(ApiError::OutOfMemory));
+            return Ok(Err(ApiError::EncodingSizeLimit));
         }
 
         if let Err(e) = self
@@ -1523,7 +1557,7 @@ where
             None => return Ok(Err(ApiError::MissingKey)),
         };
 
-        let key_bytes = match key.to_bytes() {
+        let key_bytes = match encoding::serialize(key) {
             Ok(bytes) => bytes,
             Err(error) => return Ok(Err(error.into())),
         };
@@ -1578,7 +1612,7 @@ where
     /// Writes runtime context's account main purse to [dest_ptr] in the Wasm memory.
     fn get_main_purse(&mut self, dest_ptr: u32) -> Result<(), Trap> {
         let purse = self.context.get_main_purse()?;
-        let purse_bytes = purse.into_bytes().map_err(Error::BytesRepr)?;
+        let purse_bytes = encoding::serialize(&purse).map_err(Error::Encoding)?;
         self.memory
             .set(dest_ptr, &purse_bytes)
             .map_err(|e| Error::Interpreter(e.into()).into())
@@ -1610,7 +1644,7 @@ where
     /// Writes runtime context's phase to [dest_ptr] in the Wasm memory.
     fn get_phase(&mut self, dest_ptr: u32) -> Result<(), Trap> {
         let phase = self.context.phase();
-        let bytes = phase.into_bytes().map_err(Error::BytesRepr)?;
+        let bytes = encoding::serialize(&phase).map_err(Error::Encoding)?;
         self.memory
             .set(dest_ptr, &bytes)
             .map_err(|e| Error::Interpreter(e.into()).into())
@@ -1618,11 +1652,8 @@ where
 
     /// Writes current blocktime to [dest_ptr] in Wasm memory.
     fn get_blocktime(&self, dest_ptr: u32) -> Result<(), Trap> {
-        let blocktime = self
-            .context
-            .get_blocktime()
-            .into_bytes()
-            .map_err(Error::BytesRepr)?;
+        let blocktime =
+            encoding::serialize(&self.context.get_blocktime()).map_err(Error::Encoding)?;
         self.memory
             .set(dest_ptr, &blocktime)
             .map_err(|e| Error::Interpreter(e.into()).into())
@@ -1646,7 +1677,7 @@ where
             Ok(buf) => {
                 // Set the result field in the runtime and return the proper element of the `Error`
                 // enum indicating that the reason for exiting the module was a call to ret.
-                self.host_buffer = bytesrepr::deserialize(buf).ok();
+                self.host_buffer = encoding::deserialize(&buf).ok();
 
                 let urefs = match &self.host_buffer {
                     Some(buf) => extract_urefs(buf),
@@ -1684,7 +1715,10 @@ where
         }
     }
 
-    fn get_argument<T: FromBytes + CLTyped>(args: &[CLValue], index: usize) -> Result<T, Error> {
+    fn get_argument<T: CLTyped + DeserializeOwned>(
+        args: &[CLValue],
+        index: usize,
+    ) -> Result<T, Error> {
         let arg: CLValue = args
             .get(index)
             .cloned()
@@ -1943,7 +1977,7 @@ where
             });
         }
 
-        let args: Vec<CLValue> = bytesrepr::deserialize(args_bytes)?;
+        let args: Vec<CLValue> = encoding::deserialize(&args_bytes)?;
 
         let mut extra_urefs = vec![];
         // A loop is needed to be able to use the '?' operator
@@ -2191,7 +2225,10 @@ where
         let cl_value = self.cl_value_from_mem(value_ptr, value_size)?; // read initial value from memory
         let uref = self.context.new_uref(StoredValue::CLValue(cl_value))?;
         self.memory
-            .set(uref_ptr, &uref.into_bytes().map_err(Error::BytesRepr)?)
+            .set(
+                uref_ptr,
+                &encoding::serialize(&uref).map_err(Error::Encoding)?,
+            )
             .map_err(|e| Error::Interpreter(e.into()).into())
     }
 
@@ -2341,7 +2378,7 @@ where
             let source_serialized = self.bytes_from_mem(public_key_ptr, public_key_size)?;
             // Public key deserialized
             let source: PublicKey =
-                bytesrepr::deserialize(source_serialized).map_err(Error::BytesRepr)?;
+                encoding::deserialize(&source_serialized).map_err(Error::Encoding)?;
             source
         };
         let weight = Weight::new(weight_value);
@@ -2368,7 +2405,7 @@ where
             let source_serialized = self.bytes_from_mem(public_key_ptr, public_key_size)?;
             // Public key deserialized
             let source: PublicKey =
-                bytesrepr::deserialize(source_serialized).map_err(Error::BytesRepr)?;
+                encoding::deserialize(&source_serialized).map_err(Error::Encoding)?;
             source
         };
         match self.context.remove_associated_key(public_key) {
@@ -2389,7 +2426,7 @@ where
             let source_serialized = self.bytes_from_mem(public_key_ptr, public_key_size)?;
             // Public key deserialized
             let source: PublicKey =
-                bytesrepr::deserialize(source_serialized).map_err(Error::BytesRepr)?;
+                encoding::deserialize(&source_serialized).map_err(Error::Encoding)?;
             source
         };
         let weight = Weight::new(weight_value);
@@ -2453,7 +2490,7 @@ where
     fn mint_create(&mut self, mint_contract_key: Key) -> Result<URef, Error> {
         let args_bytes = {
             let args = ("create",);
-            ArgsParser::parse(args)?.into_bytes()?
+            encoding::serialize(&ArgsParser::parse(args)?)?
         };
 
         let result = self.call_contract(mint_contract_key, args_bytes)?;
@@ -2478,7 +2515,7 @@ where
     ) -> Result<(), Error> {
         let args_bytes = {
             let args = ("transfer", source, target, amount);
-            ArgsParser::parse(args)?.into_bytes()?
+            encoding::serialize(&ArgsParser::parse(args)?)?
         };
 
         let result = self.call_contract(mint_contract_key, args_bytes)?;
@@ -2615,17 +2652,17 @@ where
     ) -> Result<Result<(), ApiError>, Error> {
         let source: URef = {
             let bytes = self.bytes_from_mem(source_ptr, source_size as usize)?;
-            bytesrepr::deserialize(bytes).map_err(Error::BytesRepr)?
+            encoding::deserialize(&bytes).map_err(Error::Encoding)?
         };
 
         let target: URef = {
             let bytes = self.bytes_from_mem(target_ptr, target_size as usize)?;
-            bytesrepr::deserialize(bytes).map_err(Error::BytesRepr)?
+            encoding::deserialize(&bytes).map_err(Error::Encoding)?
         };
 
         let amount: U512 = {
             let bytes = self.bytes_from_mem(amount_ptr, amount_size as usize)?;
-            bytesrepr::deserialize(bytes).map_err(Error::BytesRepr)?
+            encoding::deserialize(&bytes).map_err(Error::Encoding)?
         };
 
         let mint_contract_key = self.get_mint_contract_uref().into();
@@ -2643,7 +2680,7 @@ where
     fn get_balance(&mut self, purse: URef) -> Result<Option<U512>, Error> {
         let seed = self.get_mint_contract_uref().addr();
 
-        let key = purse.addr().into_bytes()?;
+        let key = encoding::serialize(&purse.addr())?;
 
         let uref_key = match self.context.read_ls_with_seed(seed, &key)? {
             Some(cl_value) => {
@@ -2686,7 +2723,7 @@ where
 
         let purse: URef = {
             let bytes = self.bytes_from_mem(purse_ptr, purse_size)?;
-            match bytesrepr::deserialize(bytes) {
+            match encoding::deserialize(&bytes) {
                 Ok(purse) => purse,
                 Err(error) => return Ok(Err(error.into())),
             }
@@ -2729,8 +2766,9 @@ where
         let named_keys = match self.context.read_gs(&key)? {
             None => Err(Error::KeyNotFound(key)),
             Some(StoredValue::Contract(contract)) => {
-                let old_contract_size =
-                    contract.named_keys().serialized_length() + contract.bytes().len();
+                let old_contract_size = encoding::serialized_length(contract.named_keys())
+                    .map_err(Error::Encoding)? as usize
+                    + contract.bytes().len();
                 scoped_timer.add_property("old_contract_size", old_contract_size);
                 Ok(contract.named_keys().clone())
             }
@@ -2740,7 +2778,9 @@ where
             ))),
         }?;
         let bytes = self.get_function_by_name(name_ptr, name_size)?;
-        let new_contract_size = named_keys.serialized_length() + bytes.len();
+        let new_contract_size = encoding::serialized_length(&named_keys).map_err(Error::Encoding)?
+            as usize
+            + bytes.len();
         scoped_timer.add_property("new_contract_size", new_contract_size);
         match self
             .context
@@ -2765,7 +2805,8 @@ where
         };
 
         // Serialize data that will be written the memory under `dest_ptr`
-        let attenuated_uref_bytes = attenuated_uref.into_bytes().map_err(Error::BytesRepr)?;
+        let attenuated_uref_bytes =
+            encoding::serialize(&attenuated_uref).map_err(Error::Encoding)?;
         match self.memory.set(dest_ptr, &attenuated_uref_bytes) {
             Ok(_) => Ok(Ok(())),
             Err(error) => Err(Error::Interpreter(error.into()).into()),
@@ -2805,7 +2846,7 @@ where
         };
 
         if serialized_value.len() > u32::max_value() as usize {
-            return Ok(Err(ApiError::OutOfMemory));
+            return Ok(Err(ApiError::EncodingSizeLimit));
         }
         if serialized_value.len() > dest_size {
             return Ok(Err(ApiError::BufferTooSmall));

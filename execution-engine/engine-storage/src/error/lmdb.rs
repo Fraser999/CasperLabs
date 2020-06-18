@@ -3,7 +3,7 @@ use std::sync;
 use failure::Fail;
 use lmdb as lmdb_external;
 
-use types::bytesrepr;
+use types::encoding;
 
 use super::in_memory;
 
@@ -13,7 +13,7 @@ pub enum Error {
     Lmdb(#[fail(cause)] lmdb_external::Error),
 
     #[fail(display = "{}", _0)]
-    BytesRepr(#[fail(cause)] bytesrepr::Error),
+    Encoding(#[fail(cause)] encoding::Error),
 
     #[fail(display = "Another thread panicked while holding a lock")]
     Poison,
@@ -27,9 +27,9 @@ impl From<lmdb_external::Error> for Error {
     }
 }
 
-impl From<bytesrepr::Error> for Error {
-    fn from(error: bytesrepr::Error) -> Self {
-        Error::BytesRepr(error)
+impl From<encoding::Error> for Error {
+    fn from(error: encoding::Error) -> Self {
+        Error::Encoding(error)
     }
 }
 
@@ -42,7 +42,7 @@ impl<T> From<sync::PoisonError<T>> for Error {
 impl From<in_memory::Error> for Error {
     fn from(error: in_memory::Error) -> Self {
         match error {
-            in_memory::Error::BytesRepr(error) => Error::BytesRepr(error),
+            in_memory::Error::Encoding(error) => Error::Encoding(error),
             in_memory::Error::Poison => Error::Poison,
         }
     }

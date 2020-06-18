@@ -1,12 +1,8 @@
-use alloc::vec::Vec;
 use core::fmt;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    bytesrepr::{Error, FromBytes, ToBytes},
-    SemVer,
-};
+use crate::SemVer;
 
 /// A newtype wrapping a [`SemVer`] which represents a CasperLabs Platform protocol version.
 #[derive(
@@ -120,24 +116,6 @@ impl ProtocolVersion {
     /// Two protocol versions with different major version are considered to be incompatible.
     pub fn is_compatible_with(&self, version: &ProtocolVersion) -> bool {
         self.0.major == version.0.major
-    }
-}
-
-impl ToBytes for ProtocolVersion {
-    fn to_bytes(&self) -> Result<Vec<u8>, Error> {
-        self.value().to_bytes()
-    }
-
-    fn serialized_length(&self) -> usize {
-        self.value().serialized_length()
-    }
-}
-
-impl FromBytes for ProtocolVersion {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), Error> {
-        let (version, rem) = SemVer::from_bytes(bytes)?;
-        let protocol_version = ProtocolVersion::new(version);
-        Ok((protocol_version, rem))
     }
 }
 

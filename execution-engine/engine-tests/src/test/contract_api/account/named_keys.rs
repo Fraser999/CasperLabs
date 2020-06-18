@@ -1,10 +1,12 @@
 use std::convert::TryFrom;
 
+use serde::de::DeserializeOwned;
+
 use engine_test_support::{
     internal::{ExecuteRequestBuilder, InMemoryWasmTestBuilder, DEFAULT_RUN_GENESIS_REQUEST},
     DEFAULT_ACCOUNT_ADDR,
 };
-use types::{bytesrepr::FromBytes, CLTyped, CLValue, Key, U512};
+use types::{CLTyped, CLValue, Key, U512};
 
 const CONTRACT_NAMED_KEYS: &str = "named_keys.wasm";
 const EXPECTED_UREF_VALUE: u64 = 123_456_789u64;
@@ -32,7 +34,7 @@ fn run_command(builder: &mut InMemoryWasmTestBuilder, command: &str) {
         .finish();
 }
 
-fn read_value<T: CLTyped + FromBytes>(builder: &mut InMemoryWasmTestBuilder, key: Key) -> T {
+fn read_value<T: CLTyped + DeserializeOwned>(builder: &mut InMemoryWasmTestBuilder, key: Key) -> T {
     CLValue::try_from(builder.query(None, key, &[]).expect("should have value"))
         .expect("should have CLValue")
         .into_t()

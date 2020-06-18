@@ -1,7 +1,7 @@
 use failure::Fail;
 
 use engine_shared::newtypes::Blake2bHash;
-use types::{bytesrepr, system_contract_errors::mint};
+use types::{encoding, system_contract_errors::mint};
 
 use crate::execution;
 use types::ProtocolVersion;
@@ -35,7 +35,7 @@ pub enum Error {
     #[fail(display = "Missing system contract association: {}", _0)]
     MissingSystemContract(String),
     #[fail(display = "Serialization error: {}", _0)]
-    Serialization(bytesrepr::Error),
+    Encoding(encoding::Error),
     #[fail(display = "Mint error: {}", _0)]
     Mint(mint::Error),
 }
@@ -64,9 +64,9 @@ impl From<engine_storage::error::Error> for Error {
     }
 }
 
-impl From<bytesrepr::Error> for Error {
-    fn from(error: bytesrepr::Error) -> Self {
-        Error::Serialization(error)
+impl From<encoding::Error> for Error {
+    fn from(error: encoding::Error) -> Self {
+        Error::Encoding(error)
     }
 }
 

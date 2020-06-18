@@ -1,7 +1,9 @@
 use alloc::string::String;
 
+use serde::de::DeserializeOwned;
+
 use contract::{contract_api::runtime, unwrap_or_revert::UnwrapOrRevert};
-use types::{account::PublicKey, bytesrepr::FromBytes, CLTyped, ContractRef, URef, U512};
+use types::{account::PublicKey, CLTyped, ContractRef, URef, U512};
 
 use crate::error::Error;
 
@@ -39,7 +41,7 @@ pub enum Api {
     Sell(URef, U512),
 }
 
-fn get_arg<T: CLTyped + FromBytes>(i: u32) -> T {
+fn get_arg<T: CLTyped + DeserializeOwned>(i: u32) -> T {
     runtime::get_arg(i)
         .unwrap_or_revert_with(Error::missing_argument(i))
         .unwrap_or_revert_with(Error::invalid_argument(i))

@@ -4,10 +4,7 @@ use core::fmt;
 use failure::Fail;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use crate::{
-    bytesrepr::{self, FromBytes, ToBytes, U32_SERIALIZED_LENGTH},
-    encoding, CLType, CLTyped,
-};
+use crate::{encoding, CLType, CLTyped};
 
 /// Error while converting a [`CLValue`] into a given type.
 #[derive(PartialEq, Eq, Clone, Debug)]
@@ -33,8 +30,8 @@ impl fmt::Display for CLTypeMismatch {
 #[derive(Fail, PartialEq, Eq, Clone, Debug)]
 pub enum CLValueError {
     /// An error while serializing or deserializing the underlying data.
-    #[fail(display = "CLValue error: {}", _0)]
-    Serialization(bytesrepr::Error),
+    #[fail(display = "Encoding error: {}", _0)]
+    Serialization(encoding::Error),
     /// A type mismatch while trying to convert a [`CLValue`] into a given type.
     #[fail(display = "Type mismatch: {}", _0)]
     Type(CLTypeMismatch),
@@ -53,19 +50,8 @@ pub struct CLValue {
 
 impl CLValue {
     /// Constructs a `CLValue` from `t`.
-    pub fn from_t<T: CLTyped + ToBytes>(t: T) -> Result<CLValue, CLValueError> {
-        let bytes = t.into_bytes().map_err(CLValueError::Serialization)?;
-
-        Ok(CLValue {
-            cl_type: T::cl_type(),
-            bytes,
-        })
-    }
-
-    /// Constructs a `CLValue` from `t`.
-    pub fn from_t_serde<T: CLTyped + Serialize>(t: T) -> Result<CLValue, CLValueError> {
-        let bytes = encoding::serialize(&t)
-            .map_err(|_| CLValueError::Serialization(bytesrepr::Error::Formatting))?;
+    pub fn from_t<T: CLTyped + Serialize>(t: T) -> Result<CLValue, CLValueError> {
+        let bytes = encoding::serialize(&t).map_err(CLValueError::Serialization)?;
 
         Ok(CLValue {
             cl_type: T::cl_type(),
@@ -74,26 +60,11 @@ impl CLValue {
     }
 
     /// Consumes and converts `self` back into its underlying type.
-    pub fn into_t<T: CLTyped + FromBytes>(self) -> Result<T, CLValueError> {
+    pub fn into_t<T: CLTyped + DeserializeOwned>(self) -> Result<T, CLValueError> {
         let expected = T::cl_type();
 
         if self.cl_type == expected {
-            bytesrepr::deserialize(self.bytes).map_err(CLValueError::Serialization)
-        } else {
-            Err(CLValueError::Type(CLTypeMismatch {
-                expected,
-                found: self.cl_type,
-            }))
-        }
-    }
-
-    /// Consumes and converts `self` back into its underlying type.
-    pub fn into_t_serde<T: CLTyped + DeserializeOwned>(self) -> Result<T, CLValueError> {
-        let expected = T::cl_type();
-
-        if self.cl_type == expected {
-            encoding::deserialize(&self.bytes)
-                .map_err(|_| CLValueError::Serialization(bytesrepr::Error::Formatting))
+            encoding::deserialize(&self.bytes).map_err(CLValueError::Serialization)
         } else {
             Err(CLValueError::Type(CLTypeMismatch {
                 expected,
@@ -124,37 +95,5 @@ impl CLValue {
     /// Returns a reference to the serialized form of the underlying value held in this `CLValue`.
     pub fn inner_bytes(&self) -> &Vec<u8> {
         &self.bytes
-    }
-
-    /// Returns the length of the `Vec<u8>` yielded after calling `self.to_bytes()`.
-    ///
-    /// Note, this method doesn't actually serialize `self`, and hence is relatively cheap.
-    pub fn serialized_length(&self) -> usize {
-        self.cl_type.serialized_length() + U32_SERIALIZED_LENGTH + self.bytes.len()
-    }
-}
-
-impl ToBytes for CLValue {
-    fn to_bytes(&self) -> Result<Vec<u8>, bytesrepr::Error> {
-        self.clone().into_bytes()
-    }
-
-    fn into_bytes(self) -> Result<Vec<u8>, bytesrepr::Error> {
-        let mut result = self.bytes.into_bytes()?;
-        self.cl_type.append_bytes(&mut result);
-        Ok(result)
-    }
-
-    fn serialized_length(&self) -> usize {
-        self.bytes.serialized_length() + self.cl_type.serialized_length()
-    }
-}
-
-impl FromBytes for CLValue {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), bytesrepr::Error> {
-        let (bytes, remainder) = Vec::<u8>::from_bytes(bytes)?;
-        let (cl_type, remainder) = CLType::from_bytes(remainder)?;
-        let cl_value = CLValue { cl_type, bytes };
-        Ok((cl_value, remainder))
     }
 }

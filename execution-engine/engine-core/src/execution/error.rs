@@ -4,7 +4,7 @@ use parity_wasm::elements;
 use engine_shared::TypeMismatch;
 use types::{
     account::{AddKeyFailure, RemoveKeyFailure, SetThresholdFailure, UpdateKeyFailure},
-    bytesrepr, system_contract_errors, AccessRights, ApiError, CLValueError, Key, URef,
+    encoding, system_contract_errors, AccessRights, ApiError, CLValueError, Key, URef,
 };
 
 use crate::resolvers::error::ResolverError;
@@ -16,7 +16,7 @@ pub enum Error {
     #[fail(display = "Storage error: {}", _0)]
     Storage(engine_storage::error::Error),
     #[fail(display = "Serialization error: {}", _0)]
-    BytesRepr(bytesrepr::Error),
+    Encoding(encoding::Error),
     #[fail(display = "Key {} not found", _0)]
     KeyNotFound(Key),
     #[fail(display = "Account {:?} not found", _0)]
@@ -95,9 +95,9 @@ impl From<engine_storage::error::Error> for Error {
     }
 }
 
-impl From<bytesrepr::Error> for Error {
-    fn from(e: bytesrepr::Error) -> Self {
-        Error::BytesRepr(e)
+impl From<encoding::Error> for Error {
+    fn from(e: encoding::Error) -> Self {
+        Error::Encoding(e)
     }
 }
 

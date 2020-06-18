@@ -8,7 +8,7 @@ use casperlabs_types::{
         ActionType, AddKeyFailure, PublicKey, RemoveKeyFailure, SetThresholdFailure,
         UpdateKeyFailure, Weight,
     },
-    bytesrepr, URef, UREF_SERIALIZED_LENGTH,
+    encoding, URef, UREF_SERIALIZED_LENGTH,
 };
 
 use super::to_ptr;
@@ -25,7 +25,7 @@ pub fn get_main_purse() -> URef {
             UREF_SERIALIZED_LENGTH,
         )
     };
-    bytesrepr::deserialize(bytes).unwrap_or_revert()
+    encoding::deserialize(&bytes).unwrap_or_revert()
 }
 
 /// Sets the given [`ActionType`]'s threshold to the provided value.

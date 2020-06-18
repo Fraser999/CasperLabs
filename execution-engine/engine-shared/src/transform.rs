@@ -8,11 +8,9 @@ use std::{
 };
 
 use num::traits::{AsPrimitive, WrappingAdd};
+use serde::{de::DeserializeOwned, Serialize};
 
-use types::{
-    bytesrepr::{self, FromBytes, ToBytes},
-    CLType, CLTyped, CLValue, CLValueError, Key, U128, U256, U512,
-};
+use types::{encoding, CLType, CLTyped, CLValue, CLValueError, Key, U128, U256, U512};
 
 use crate::{stored_value::StoredValue, TypeMismatch};
 
@@ -25,7 +23,7 @@ use crate::{stored_value::StoredValue, TypeMismatch};
 /// cause an overflow).
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Error {
-    Serialization(bytesrepr::Error),
+    Serialization(encoding::Error),
     TypeMismatch(TypeMismatch),
 }
 
@@ -127,7 +125,7 @@ where
 /// Attempts a wrapping addition of `to_add` to the value represented by `cl_value`.
 fn do_wrapping_addition<X, Y>(cl_value: CLValue, to_add: Y) -> Result<StoredValue, Error>
 where
-    X: WrappingAdd + CLTyped + ToBytes + FromBytes + Copy + 'static,
+    X: WrappingAdd + CLTyped + Serialize + DeserializeOwned + Copy + 'static,
     Y: AsPrimitive<X>,
 {
     let x: X = cl_value.into_t()?;
@@ -373,7 +371,7 @@ mod tests {
 
     fn uint_overflow_test<T>()
     where
-        T: Num + Bounded + CLTyped + ToBytes + Into<Transform> + Copy,
+        T: Num + Bounded + CLTyped + Serialize + Into<Transform> + Copy,
     {
         let max = T::max_value();
         let min = T::min_value();
@@ -509,7 +507,7 @@ mod tests {
     fn wrapping_addition_should_succeed() {
         fn add<X, Y>(current_value: X, to_add: Y) -> X
         where
-            X: CLTyped + ToBytes + FromBytes + PartialEq + fmt::Debug,
+            X: CLTyped + Serialize + DeserializeOwned + PartialEq + fmt::Debug,
             Y: AsPrimitive<i32>
                 + AsPrimitive<i64>
                 + AsPrimitive<u8>

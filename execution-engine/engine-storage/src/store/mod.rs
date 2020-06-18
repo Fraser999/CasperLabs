@@ -2,13 +2,15 @@ mod store_ext;
 #[cfg(test)]
 pub(crate) mod tests;
 
-use types::bytesrepr::{self, FromBytes, ToBytes};
+use serde::{de::DeserializeOwned, Serialize};
+
+use types::encoding;
 
 pub use self::store_ext::StoreExt;
 use crate::transaction_source::{Readable, Writable};
 
 pub trait Store<K, V> {
-    type Error: From<bytesrepr::Error>;
+    type Error: From<encoding::Error>;
 
     type Handle;
 
@@ -17,15 +19,15 @@ pub trait Store<K, V> {
     fn get<T>(&self, txn: &T, key: &K) -> Result<Option<V>, Self::Error>
     where
         T: Readable<Handle = Self::Handle>,
-        K: ToBytes,
-        V: FromBytes,
+        K: Serialize,
+        V: DeserializeOwned,
         Self::Error: From<T::Error>,
     {
         let handle = self.handle();
-        match txn.read(handle, &key.to_bytes()?)? {
+        match txn.read(handle, &encoding::serialize(key)?)? {
             None => Ok(None),
             Some(value_bytes) => {
-                let value = bytesrepr::deserialize(value_bytes)?;
+                let value = encoding::deserialize(&value_bytes)?;
                 Ok(Some(value))
             }
         }
@@ -34,12 +36,16 @@ pub trait Store<K, V> {
     fn put<T>(&self, txn: &mut T, key: &K, value: &V) -> Result<(), Self::Error>
     where
         T: Writable<Handle = Self::Handle>,
-        K: ToBytes,
-        V: ToBytes,
+        K: Serialize,
+        V: Serialize,
         Self::Error: From<T::Error>,
     {
         let handle = self.handle();
-        txn.write(handle, &key.to_bytes()?, &value.to_bytes()?)
-            .map_err(Into::into)
+        txn.write(
+            handle,
+            &encoding::serialize(key)?,
+            &encoding::serialize(value)?,
+        )
+        .map_err(Into::into)
     }
 }

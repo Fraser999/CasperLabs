@@ -5,12 +5,14 @@
 use alloc::vec;
 use alloc::vec::Vec;
 
-use casperlabs_types::{bytesrepr::ToBytes, CLTyped, CLValue, CLValueError};
+use serde::Serialize;
+
+use casperlabs_types::{CLTyped, CLValue, CLValueError};
 
 /// Types which implement [`ArgsParser`] can be parsed into an ABI-compliant byte representation
 /// suitable for passing as arguments to a contract.
 ///
-/// It is primarily implemented for n-ary tuples of values which themselves implement [`ToBytes`]
+/// It is primarily implemented for n-ary tuples of values which themselves implement [`Serialize`]
 /// and [`CLTyped`].
 pub trait ArgsParser {
     /// Parses the arguments to a `Vec` of [`CLValue`]s.
@@ -25,7 +27,7 @@ impl ArgsParser for () {
 
 macro_rules! impl_argsparser_tuple {
     ( $($name:ident)+) => (
-        impl<$($name: CLTyped + ToBytes),*> ArgsParser for ($($name,)*) {
+        impl<$($name: CLTyped + Serialize),*> ArgsParser for ($($name,)*) {
             #[allow(non_snake_case)]
             fn parse(self) -> Result<Vec<CLValue>, CLValueError> {
                 let ($($name,)+) = self;

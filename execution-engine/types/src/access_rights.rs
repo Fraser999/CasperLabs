@@ -1,15 +1,8 @@
-use alloc::vec::Vec;
-
 use bitflags::bitflags;
 use serde::{
     de::{Error, Unexpected},
     Deserialize, Deserializer, Serialize, Serializer,
 };
-
-use crate::bytesrepr;
-
-/// The number of bytes in a serialized [`AccessRights`].
-pub const ACCESS_RIGHTS_SERIALIZED_LENGTH: usize = 1;
 
 bitflags! {
     /// A struct which behaves like a set of bitflags to define access rights associated with a
@@ -87,26 +80,6 @@ impl core::fmt::Display for AccessRights {
             AccessRights::ADD_WRITE => write!(f, "ADD_WRITE"),
             AccessRights::READ_ADD_WRITE => write!(f, "READ_ADD_WRITE"),
             _ => write!(f, "UNKNOWN"),
-        }
-    }
-}
-
-impl bytesrepr::ToBytes for AccessRights {
-    fn to_bytes(&self) -> Result<Vec<u8>, bytesrepr::Error> {
-        self.bits.to_bytes()
-    }
-
-    fn serialized_length(&self) -> usize {
-        ACCESS_RIGHTS_SERIALIZED_LENGTH
-    }
-}
-
-impl bytesrepr::FromBytes for AccessRights {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), bytesrepr::Error> {
-        let (id, rem) = u8::from_bytes(bytes)?;
-        match AccessRights::from_bits(id) {
-            Some(rights) => Ok((rights, rem)),
-            None => Err(bytesrepr::Error::Formatting),
         }
     }
 }

@@ -42,7 +42,7 @@ use engine_shared::{
     newtypes::{Blake2bHash, CorrelationId},
 };
 use engine_storage::global_state::{CommitResult, StateProvider};
-use types::{bytesrepr::ToBytes, ProtocolVersion};
+use types::{encoding, ProtocolVersion};
 
 use self::{
     ipc::{
@@ -111,7 +111,7 @@ where
         let response = match result {
             Ok(QueryResult::Success(value)) => {
                 let mut result = ipc::QueryResponse::new();
-                match value.to_bytes() {
+                match encoding::serialize(&value) {
                     Ok(serialized_value) => {
                         info!("query successful; correlation_id: {}", correlation_id);
                         result.set_success(serialized_value);

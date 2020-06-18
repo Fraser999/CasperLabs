@@ -1,8 +1,3 @@
-// Can be removed once https://github.com/rust-lang/rustfmt/issues/3362 is resolved.
-#[rustfmt::skip]
-use alloc::vec;
-use alloc::vec::Vec;
-
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::{FromPrimitive, ToPrimitive};
 use serde::{
@@ -10,10 +5,7 @@ use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
 };
 
-use crate::{
-    bytesrepr::{Error, FromBytes, ToBytes},
-    CLType, CLTyped,
-};
+use crate::{CLType, CLTyped};
 
 /// The number of bytes in a serialized [`Phase`].
 pub const PHASE_SERIALIZED_LENGTH: usize = 1;
@@ -30,26 +22,6 @@ pub enum Phase {
     Session = 2,
     /// Set while finalizing payment at the end of a deploy.
     FinalizePayment = 3,
-}
-
-impl ToBytes for Phase {
-    fn to_bytes(&self) -> Result<Vec<u8>, Error> {
-        let id = self.to_u8().expect("Phase is represented as a u8");
-
-        Ok(vec![id])
-    }
-
-    fn serialized_length(&self) -> usize {
-        PHASE_SERIALIZED_LENGTH
-    }
-}
-
-impl FromBytes for Phase {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), Error> {
-        let (id, rest) = u8::from_bytes(bytes)?;
-        let phase = FromPrimitive::from_u8(id).ok_or(Error::Formatting)?;
-        Ok((phase, rest))
-    }
 }
 
 impl Serialize for Phase {
@@ -70,5 +42,18 @@ impl<'de> Deserialize<'de> for Phase {
 impl CLTyped for Phase {
     fn cl_type() -> CLType {
         CLType::U8
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::encoding;
+
+    #[test]
+    fn serialized_length() {
+        let actual_length = encoding::serialized_length(&Phase::Session).unwrap();
+        assert_eq!(actual_length as usize, PHASE_SERIALIZED_LENGTH);
     }
 }

@@ -11,8 +11,6 @@ use blake2::{
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use types::bytesrepr::{self, FromBytes, ToBytes};
-
 pub use types::BLAKE2B_DIGEST_LENGTH;
 
 /// Represents a 32-byte BLAKE2b hash digest
@@ -92,22 +90,6 @@ impl<'a> TryFrom<&'a [u8]> for Blake2bHash {
 impl Into<[u8; BLAKE2B_DIGEST_LENGTH]> for Blake2bHash {
     fn into(self) -> [u8; BLAKE2B_DIGEST_LENGTH] {
         self.0
-    }
-}
-
-impl ToBytes for Blake2bHash {
-    fn to_bytes(&self) -> Result<Vec<u8>, bytesrepr::Error> {
-        self.0.to_bytes()
-    }
-
-    fn serialized_length(&self) -> usize {
-        self.0.serialized_length()
-    }
-}
-
-impl FromBytes for Blake2bHash {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), bytesrepr::Error> {
-        FromBytes::from_bytes(bytes).map(|(arr, rem)| (Blake2bHash(arr), rem))
     }
 }
 

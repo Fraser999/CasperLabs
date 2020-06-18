@@ -45,11 +45,7 @@ use engine_storage::{
     transaction_source::lmdb::LmdbEnvironment,
     trie_store::lmdb::LmdbTrieStore,
 };
-use types::{
-    account::PublicKey,
-    bytesrepr::{self, ToBytes},
-    CLValue, Key, URef, U512,
-};
+use types::{account::PublicKey, encoding, CLValue, Key, URef, U512};
 
 use crate::internal::utils;
 
@@ -379,7 +375,7 @@ where
             return Err(query_response.take_failure());
         }
 
-        bytesrepr::deserialize(query_response.take_success()).map_err(|err| format!("{}", err))
+        encoding::deserialize(&query_response.take_success()).map_err(|err| format!("{}", err))
     }
 
     pub fn exec(&mut self, mut exec_request: ExecuteRequest) -> &mut Self {
@@ -607,7 +603,7 @@ where
         let mint = self.get_mint_contract_uref();
         let purse_addr = purse.addr();
         let purse_bytes =
-            ToBytes::to_bytes(&purse_addr).expect("should be able to serialize purse bytes");
+            encoding::serialize(&purse_addr).expect("should be able to serialize purse bytes");
         let balance_mapping_key = Key::local(mint.addr(), &purse_bytes);
         let base_key = self
             .query(None, balance_mapping_key, &[])

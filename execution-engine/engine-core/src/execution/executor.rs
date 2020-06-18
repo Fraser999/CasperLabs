@@ -5,6 +5,7 @@ use std::{
 };
 
 use parity_wasm::elements::Module;
+use serde::de::DeserializeOwned;
 use wasmi::ModuleRef;
 
 use engine_shared::{
@@ -12,9 +13,7 @@ use engine_shared::{
 };
 use engine_storage::{global_state::StateReader, protocol_data::ProtocolData};
 use types::{
-    account::PublicKey,
-    bytesrepr::{self, FromBytes},
-    BlockTime, CLTyped, CLValue, Key, Phase, ProtocolVersion,
+    account::PublicKey, encoding, BlockTime, CLTyped, CLValue, Key, Phase, ProtocolVersion,
 };
 
 use crate::{
@@ -130,7 +129,7 @@ impl Executor {
             // TODO: figure out how this works with the cost model
             // https://casperlabs.atlassian.net/browse/EE-239
             let gas = Gas::new(args.len().into());
-            on_fail_charge!(bytesrepr::deserialize(args), gas, effects_snapshot)
+            on_fail_charge!(encoding::deserialize(&args), gas, effects_snapshot)
         };
 
         let context = RuntimeContext::new(
@@ -269,7 +268,7 @@ impl Executor {
             Vec::new()
         } else {
             let gas = Gas::new(args.len().into());
-            on_fail_charge!(bytesrepr::deserialize(args), gas, effects_snapshot)
+            on_fail_charge!(encoding::deserialize(&args), gas, effects_snapshot)
         };
 
         let context = RuntimeContext::new(
@@ -404,7 +403,7 @@ impl Executor {
         let args: Vec<CLValue> = if args.is_empty() {
             Vec::new()
         } else {
-            bytesrepr::deserialize(args)?
+            encoding::deserialize(&args)?
         };
 
         let gas_counter = Gas::default();
@@ -464,7 +463,7 @@ impl Executor {
     where
         R: StateReader<Key, StoredValue>,
         R::Error: Into<Error>,
-        T: FromBytes + CLTyped,
+        T: DeserializeOwned + CLTyped,
     {
         let (instance, mut runtime) = self.create_runtime(
             module,

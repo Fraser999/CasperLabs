@@ -3,10 +3,11 @@
 use alloc::{collections::BTreeMap, string::String, vec::Vec};
 use core::{convert::From, mem::MaybeUninit};
 
+use serde::{de::DeserializeOwned, Serialize};
+
 use casperlabs_types::{
-    api_error,
-    bytesrepr::{self, FromBytes, ToBytes},
-    AccessRights, ApiError, CLTyped, CLValue, ContractRef, Key, URef, UREF_SERIALIZED_LENGTH,
+    api_error, encoding, AccessRights, ApiError, CLTyped, CLValue, ContractRef, Key, URef,
+    UREF_SERIALIZED_LENGTH,
 };
 
 use crate::{
@@ -16,7 +17,7 @@ use crate::{
 };
 
 /// Reads value under `uref` in the global state.
-pub fn read<T: CLTyped + FromBytes>(uref: URef) -> Result<Option<T>, bytesrepr::Error> {
+pub fn read<T: CLTyped + DeserializeOwned>(uref: URef) -> Result<Option<T>, encoding::Error> {
     let key: Key = uref.into();
     let (key_ptr, key_size, _bytes) = contract_api::to_ptr(key);
 
@@ -31,21 +32,21 @@ pub fn read<T: CLTyped + FromBytes>(uref: URef) -> Result<Option<T>, bytesrepr::
     };
 
     let value_bytes = runtime::read_host_buffer(value_size).unwrap_or_revert();
-    Ok(Some(bytesrepr::deserialize(value_bytes)?))
+    Ok(Some(encoding::deserialize(&value_bytes)?))
 }
 
 /// Reads value under `uref` in the global state, reverts if value not found or is not `T`.
-pub fn read_or_revert<T: CLTyped + FromBytes>(uref: URef) -> T {
+pub fn read_or_revert<T: CLTyped + DeserializeOwned>(uref: URef) -> T {
     read(uref)
         .unwrap_or_revert_with(ApiError::Read)
         .unwrap_or_revert_with(ApiError::ValueNotFound)
 }
 
 /// Reads the value under `key` in the context-local partition of global state.
-pub fn read_local<K: ToBytes, V: CLTyped + FromBytes>(
+pub fn read_local<K: Serialize, V: CLTyped + DeserializeOwned>(
     key: &K,
-) -> Result<Option<V>, bytesrepr::Error> {
-    let key_bytes = key.to_bytes()?;
+) -> Result<Option<V>, encoding::Error> {
+    let key_bytes = encoding::serialize(key)?;
 
     let value_size = {
         let mut value_size = MaybeUninit::uninit();
@@ -60,11 +61,11 @@ pub fn read_local<K: ToBytes, V: CLTyped + FromBytes>(
     };
 
     let value_bytes = runtime::read_host_buffer(value_size).unwrap_or_revert();
-    Ok(Some(bytesrepr::deserialize(value_bytes)?))
+    Ok(Some(encoding::deserialize(&value_bytes)?))
 }
 
 /// Writes `value` under `uref` in the global state.
-pub fn write<T: CLTyped + ToBytes>(uref: URef, value: T) {
+pub fn write<T: CLTyped + Serialize>(uref: URef, value: T) {
     let key = Key::from(uref);
     let (key_ptr, key_size, _bytes1) = contract_api::to_ptr(key);
 
@@ -77,7 +78,7 @@ pub fn write<T: CLTyped + ToBytes>(uref: URef, value: T) {
 }
 
 /// Writes `value` under `key` in the context-local partition of global state.
-pub fn write_local<K: ToBytes, V: CLTyped + ToBytes>(key: K, value: V) {
+pub fn write_local<K: Serialize, V: CLTyped + Serialize>(key: K, value: V) {
     let (key_ptr, key_size, _bytes1) = contract_api::to_ptr(key);
 
     let cl_value = CLValue::from_t(value).unwrap_or_revert();
@@ -89,7 +90,7 @@ pub fn write_local<K: ToBytes, V: CLTyped + ToBytes>(key: K, value: V) {
 }
 
 /// Adds `value` to the one currently under `uref` in the global state.
-pub fn add<T: CLTyped + ToBytes>(uref: URef, value: T) {
+pub fn add<T: CLTyped + Serialize>(uref: URef, value: T) {
     let key = Key::from(uref);
     let (key_ptr, key_size, _bytes1) = contract_api::to_ptr(key);
 
@@ -103,7 +104,7 @@ pub fn add<T: CLTyped + ToBytes>(uref: URef, value: T) {
 }
 
 /// Adds `value` to the one currently under `key` in the context-local partition of global state.
-pub fn add_local<K: ToBytes, V: CLTyped + ToBytes>(key: K, value: V) {
+pub fn add_local<K: Serialize, V: CLTyped + Serialize>(key: K, value: V) {
     let (key_ptr, key_size, _bytes1) = contract_api::to_ptr(key);
 
     let cl_value = CLValue::from_t(value).unwrap_or_revert();
@@ -139,7 +140,7 @@ pub fn store_function_at_hash(name: &str, named_keys: BTreeMap<String, Key>) -> 
 }
 
 /// Returns a new unforgeable pointer, where the value is initialized to `init`.
-pub fn new_uref<T: CLTyped + ToBytes>(init: T) -> URef {
+pub fn new_uref<T: CLTyped + Serialize>(init: T) -> URef {
     let uref_non_null_ptr = contract_api::alloc_bytes(UREF_SERIALIZED_LENGTH);
     let cl_value = CLValue::from_t(init).unwrap_or_revert();
     let (cl_value_ptr, cl_value_size, _cl_value_bytes) = contract_api::to_ptr(cl_value);
@@ -151,5 +152,5 @@ pub fn new_uref<T: CLTyped + ToBytes>(init: T) -> URef {
             UREF_SERIALIZED_LENGTH,
         )
     };
-    bytesrepr::deserialize(bytes).unwrap_or_revert()
+    encoding::deserialize(&bytes).unwrap_or_revert()
 }

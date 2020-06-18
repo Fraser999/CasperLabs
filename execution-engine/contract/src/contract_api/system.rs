@@ -4,7 +4,7 @@ use alloc::vec::Vec;
 use core::mem::MaybeUninit;
 
 use casperlabs_types::{
-    account::PublicKey, api_error, bytesrepr, ApiError, ContractRef, SystemContractType,
+    account::PublicKey, api_error, encoding, ApiError, ContractRef, SystemContractType,
     TransferResult, TransferredTo, URef, U512, UREF_SERIALIZED_LENGTH,
 };
 
@@ -36,7 +36,7 @@ fn get_system_contract(system_contract: SystemContractType) -> ContractRef {
         // Revert for any possible error that happened on host side
         let uref_bytes = result.unwrap_or_else(|e| runtime::revert(e));
         // Deserializes a valid URef passed from the host side
-        bytesrepr::deserialize(uref_bytes.to_vec()).unwrap_or_revert()
+        encoding::deserialize(&uref_bytes).unwrap_or_revert()
     };
     if uref.access_rights().is_none() {
         runtime::revert(ApiError::NoAccessRights);
@@ -76,7 +76,7 @@ pub fn create_purse() -> URef {
                 UREF_SERIALIZED_LENGTH,
                 UREF_SERIALIZED_LENGTH,
             );
-            bytesrepr::deserialize(bytes).unwrap_or_revert()
+            encoding::deserialize(&bytes).unwrap_or_revert()
         } else {
             runtime::revert(ApiError::PurseNotCreated)
         }
@@ -97,7 +97,7 @@ pub fn get_balance(purse: URef) -> Option<U512> {
         }
     };
     let value_bytes = runtime::read_host_buffer(value_size).unwrap_or_revert();
-    let value: U512 = bytesrepr::deserialize(value_bytes).unwrap_or_revert();
+    let value: U512 = encoding::deserialize(&value_bytes).unwrap_or_revert();
     Some(value)
 }
 

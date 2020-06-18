@@ -5,7 +5,7 @@ use engine_core::{
     engine_state::{deploy_item::DeployItem, executable_deploy_item::ExecutableDeployItem},
     DeployHash,
 };
-use types::{account::PublicKey, bytesrepr::ToBytes, URef};
+use types::{account::PublicKey, encoding, URef};
 
 use crate::internal::utils;
 
@@ -174,9 +174,7 @@ impl DeployItemBuilder {
     }
 
     fn serialize_args(args: impl ArgsParser) -> Vec<u8> {
-        args.parse()
-            .expect("should convert to `Vec<CLValue>`")
-            .into_bytes()
+        encoding::serialize(&args.parse().expect("should convert to `Vec<CLValue>`"))
             .expect("should serialize args")
     }
 }

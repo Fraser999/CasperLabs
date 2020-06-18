@@ -148,7 +148,7 @@ mod full_tries {
 #[cfg(debug_assertions)]
 mod keys_iterator {
     use engine_shared::newtypes::{Blake2bHash, CorrelationId};
-    use types::bytesrepr;
+    use types::encoding;
 
     use crate::{
         transaction_source::TransactionSource,
@@ -162,8 +162,8 @@ mod keys_iterator {
         },
     };
 
-    fn create_invalid_extension_trie(
-    ) -> Result<(Blake2bHash, Vec<HashedTestTrie>), bytesrepr::Error> {
+    fn create_invalid_extension_trie() -> Result<(Blake2bHash, Vec<HashedTestTrie>), encoding::Error>
+    {
         let leaves = hash_test_tries(&TEST_LEAVES[2..3])?;
         let ext_1 = HashedTrie::new(Trie::extension(
             vec![0u8, 0],
@@ -178,7 +178,7 @@ mod keys_iterator {
         Ok((root_hash, tries))
     }
 
-    fn create_invalid_path_trie() -> Result<(Blake2bHash, Vec<HashedTestTrie>), bytesrepr::Error> {
+    fn create_invalid_path_trie() -> Result<(Blake2bHash, Vec<HashedTestTrie>), encoding::Error> {
         let leaves = hash_test_tries(&TEST_LEAVES[..1])?;
 
         let root = HashedTrie::new(Trie::node(&[(1, Pointer::NodePointer(leaves[0].hash))]))?;
@@ -189,7 +189,7 @@ mod keys_iterator {
         Ok((root_hash, tries))
     }
 
-    fn create_invalid_hash_trie() -> Result<(Blake2bHash, Vec<HashedTestTrie>), bytesrepr::Error> {
+    fn create_invalid_hash_trie() -> Result<(Blake2bHash, Vec<HashedTestTrie>), encoding::Error> {
         let leaves = hash_test_tries(&TEST_LEAVES[..2])?;
 
         let root = HashedTrie::new(Trie::node(&[(0, Pointer::NodePointer(leaves[1].hash))]))?;

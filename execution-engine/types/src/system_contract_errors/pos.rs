@@ -1,17 +1,14 @@
 //! Home of the Proof of Stake contract's [`Error`] type.
-use failure::Fail;
-
-use alloc::vec::Vec;
 use core::result;
 
-use crate::{
-    bytesrepr::{self, ToBytes, U8_SERIALIZED_LENGTH},
-    CLType, CLTyped,
-};
+use failure::Fail;
+use serde_repr::{Deserialize_repr, Serialize_repr};
+
+use crate::{CLType, CLTyped};
 
 /// Errors which can occur while executing the Proof of Stake contract.
 // TODO: Split this up into user errors vs. system errors.
-#[derive(Fail, Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Fail, Debug, Copy, Clone, PartialEq, Eq, Serialize_repr, Deserialize_repr)]
 #[repr(u8)]
 pub enum Error {
     // ===== User errors =====
@@ -110,17 +107,6 @@ pub enum Error {
 impl CLTyped for Error {
     fn cl_type() -> CLType {
         CLType::U8
-    }
-}
-
-impl ToBytes for Error {
-    fn to_bytes(&self) -> result::Result<Vec<u8>, bytesrepr::Error> {
-        let value = *self as u8;
-        value.to_bytes()
-    }
-
-    fn serialized_length(&self) -> usize {
-        U8_SERIALIZED_LENGTH
     }
 }
 

@@ -8,8 +8,6 @@ use serde::{
     ser::{Serialize, SerializeStruct, Serializer},
 };
 
-use crate::bytesrepr::{self, Error, FromBytes, ToBytes, U8_SERIALIZED_LENGTH};
-
 #[allow(
     clippy::assign_op_pattern,
     clippy::ptr_offset_with_cast,
@@ -45,40 +43,6 @@ pub enum UIntParseError {
 
 macro_rules! impl_traits_for_uint {
     ($type:ident, $total_bytes:expr, $test_mod:ident) => {
-        impl ToBytes for $type {
-            fn to_bytes(&self) -> Result<Vec<u8>, Error> {
-                let mut buf = [0u8; $total_bytes];
-                self.to_little_endian(&mut buf);
-                let mut non_zero_bytes: Vec<u8> =
-                    buf.iter().rev().skip_while(|b| **b == 0).cloned().collect();
-                let num_bytes = non_zero_bytes.len() as u8;
-                non_zero_bytes.push(num_bytes);
-                non_zero_bytes.reverse();
-                Ok(non_zero_bytes)
-            }
-
-            fn serialized_length(&self) -> usize {
-                let mut buf = [0u8; $total_bytes];
-                self.to_little_endian(&mut buf);
-                let non_zero_bytes = buf.iter().rev().skip_while(|b| **b == 0).count();
-                U8_SERIALIZED_LENGTH + non_zero_bytes
-            }
-        }
-
-        impl FromBytes for $type {
-            fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), Error> {
-                let (num_bytes, rem): (u8, &[u8]) = FromBytes::from_bytes(bytes)?;
-
-                if num_bytes > $total_bytes {
-                    Err(Error::Formatting)
-                } else {
-                    let (value, rem) = bytesrepr::safe_split_at(rem, num_bytes as usize)?;
-                    let result = $type::from_little_endian(value);
-                    Ok((result, rem))
-                }
-            }
-        }
-
         impl Serialize for $type {
             fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
                 let mut buffer = [0u8; $total_bytes];

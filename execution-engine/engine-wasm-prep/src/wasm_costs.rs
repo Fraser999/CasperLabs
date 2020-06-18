@@ -3,11 +3,6 @@ use std::collections::BTreeMap;
 use pwasm_utils::rules::{InstructionType, Metering, Set};
 use serde::{Deserialize, Serialize};
 
-use types::bytesrepr::{self, FromBytes, ToBytes, U32_SERIALIZED_LENGTH};
-
-const NUM_FIELDS: usize = 10;
-pub const WASM_COSTS_SERIALIZED_LENGTH: usize = NUM_FIELDS * U32_SERIALIZED_LENGTH;
-
 // Taken (partially) from parity-ethereum
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WasmCosts {
@@ -52,55 +47,6 @@ impl WasmCosts {
     }
 }
 
-impl ToBytes for WasmCosts {
-    fn to_bytes(&self) -> Result<Vec<u8>, bytesrepr::Error> {
-        let mut ret = bytesrepr::unchecked_allocate_buffer(self);
-        ret.append(&mut self.regular.to_bytes()?);
-        ret.append(&mut self.div.to_bytes()?);
-        ret.append(&mut self.mul.to_bytes()?);
-        ret.append(&mut self.mem.to_bytes()?);
-        ret.append(&mut self.initial_mem.to_bytes()?);
-        ret.append(&mut self.grow_mem.to_bytes()?);
-        ret.append(&mut self.memcpy.to_bytes()?);
-        ret.append(&mut self.max_stack_height.to_bytes()?);
-        ret.append(&mut self.opcodes_mul.to_bytes()?);
-        ret.append(&mut self.opcodes_div.to_bytes()?);
-        Ok(ret)
-    }
-
-    fn serialized_length(&self) -> usize {
-        WASM_COSTS_SERIALIZED_LENGTH
-    }
-}
-
-impl FromBytes for WasmCosts {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), bytesrepr::Error> {
-        let (regular, rem): (u32, &[u8]) = FromBytes::from_bytes(bytes)?;
-        let (div, rem): (u32, &[u8]) = FromBytes::from_bytes(rem)?;
-        let (mul, rem): (u32, &[u8]) = FromBytes::from_bytes(rem)?;
-        let (mem, rem): (u32, &[u8]) = FromBytes::from_bytes(rem)?;
-        let (initial_mem, rem): (u32, &[u8]) = FromBytes::from_bytes(rem)?;
-        let (grow_mem, rem): (u32, &[u8]) = FromBytes::from_bytes(rem)?;
-        let (memcpy, rem): (u32, &[u8]) = FromBytes::from_bytes(rem)?;
-        let (max_stack_height, rem): (u32, &[u8]) = FromBytes::from_bytes(rem)?;
-        let (opcodes_mul, rem): (u32, &[u8]) = FromBytes::from_bytes(rem)?;
-        let (opcodes_div, rem): (u32, &[u8]) = FromBytes::from_bytes(rem)?;
-        let wasm_costs = WasmCosts {
-            regular,
-            div,
-            mul,
-            mem,
-            initial_mem,
-            grow_mem,
-            memcpy,
-            max_stack_height,
-            opcodes_mul,
-            opcodes_div,
-        };
-        Ok((wasm_costs, rem))
-    }
-}
-
 pub mod gens {
     use proptest::{num, prop_compose};
 
@@ -139,7 +85,7 @@ pub mod gens {
 mod tests {
     use proptest::proptest;
 
-    use types::bytesrepr;
+    use types::encoding;
 
     use super::gens;
     use crate::wasm_costs::WasmCosts;
@@ -178,8 +124,8 @@ mod tests {
     fn should_serialize_and_deserialize() {
         let mock = wasm_costs_mock();
         let free = wasm_costs_free();
-        bytesrepr::test_serialization_roundtrip(&mock);
-        bytesrepr::test_serialization_roundtrip(&free);
+        encoding::test_serialization_roundtrip(&mock);
+        encoding::test_serialization_roundtrip(&free);
     }
 
     proptest! {
@@ -187,7 +133,7 @@ mod tests {
         fn should_serialize_and_deserialize_with_arbitrary_values(
             wasm_costs in gens::wasm_costs_arb()
         ) {
-            bytesrepr::test_serialization_roundtrip(&wasm_costs);
+            encoding::test_serialization_roundtrip(&wasm_costs);
         }
     }
 }

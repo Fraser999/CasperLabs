@@ -21,8 +21,7 @@ use types::{
         ActionType, AddKeyFailure, PublicKey, RemoveKeyFailure, SetThresholdFailure,
         UpdateKeyFailure, Weight,
     },
-    bytesrepr::{self, ToBytes},
-    AccessRights, BlockTime, CLType, CLValue, Key, Phase, ProtocolVersion, URef,
+    encoding, AccessRights, BlockTime, CLType, CLValue, Key, Phase, ProtocolVersion, URef,
     KEY_LOCAL_SEED_LENGTH,
 };
 
@@ -285,7 +284,7 @@ where
     pub fn new_function_address(&mut self) -> Result<[u8; 32], Error> {
         let mut pre_hash_bytes = Vec::with_capacity(36); //32 bytes for deploy hash + 4 bytes ID
         pre_hash_bytes.extend_from_slice(&self.deploy_hash);
-        pre_hash_bytes.append(&mut self.fn_store_id().into_bytes()?);
+        pre_hash_bytes.append(&mut encoding::serialize(&self.fn_store_id())?);
 
         self.inc_fn_store_id();
 
@@ -552,13 +551,13 @@ where
     }
 
     pub fn deserialize_keys(&self, bytes: Vec<u8>) -> Result<Vec<Key>, Error> {
-        let keys: Vec<Key> = bytesrepr::deserialize(bytes)?;
+        let keys: Vec<Key> = encoding::deserialize(&bytes)?;
         keys.iter().try_for_each(|k| self.validate_key(k))?;
         Ok(keys)
     }
 
     pub fn deserialize_urefs(&self, bytes: Vec<u8>) -> Result<Vec<URef>, Error> {
-        let keys: Vec<URef> = bytesrepr::deserialize(bytes)?;
+        let keys: Vec<URef> = encoding::deserialize(&bytes)?;
         keys.iter().try_for_each(|k| self.validate_uref(k))?;
         Ok(keys)
     }
@@ -645,7 +644,7 @@ where
             Ok(AddResult::Success) => Ok(()),
             Ok(AddResult::KeyNotFound(key)) => Err(Error::KeyNotFound(key)),
             Ok(AddResult::TypeMismatch(type_mismatch)) => Err(Error::TypeMismatch(type_mismatch)),
-            Ok(AddResult::Serialization(error)) => Err(Error::BytesRepr(error)),
+            Ok(AddResult::Encoding(error)) => Err(Error::Encoding(error)),
         }
     }
 

@@ -5,7 +5,7 @@ use engine_test_support::{
     internal::{ExecuteRequestBuilder, InMemoryWasmTestBuilder, DEFAULT_RUN_GENESIS_REQUEST},
     DEFAULT_ACCOUNT_ADDR,
 };
-use types::{bytesrepr::ToBytes, CLValue, Key};
+use types::{encoding, CLValue, Key};
 
 const CONTRACT_LOCAL_STATE: &str = "local_state.wasm";
 
@@ -41,7 +41,7 @@ fn should_run_local_state_contract() {
             .as_bytes()
             .try_into()
             .expect("should be 32 bytes"),
-        &[66u8; 32].to_bytes().unwrap(),
+        &encoding::serialize(&[66u8; 32]).unwrap(),
     );
 
     assert_eq!(transforms.len(), 2);
@@ -95,7 +95,7 @@ fn should_add_to_local_state() {
             .as_bytes()
             .try_into()
             .expect("should be 32 bytes"),
-        &[66u8; 32].to_bytes().unwrap(),
+        &encoding::serialize(&[66u8; 32]).unwrap(),
     );
 
     assert_eq!(transforms.len(), 2);

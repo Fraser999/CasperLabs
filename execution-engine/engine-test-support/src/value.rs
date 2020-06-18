@@ -1,10 +1,9 @@
 use std::convert::{TryFrom, TryInto};
 
+use serde::{de::DeserializeOwned, Serialize};
+
 use engine_shared::stored_value::StoredValue;
-use types::{
-    bytesrepr::{FromBytes, ToBytes},
-    CLTyped, CLValue,
-};
+use types::{CLTyped, CLValue};
 
 use crate::{Account, Result};
 
@@ -22,14 +21,14 @@ impl Value {
     }
 
     /// Constructs a `Value` from `t`.
-    pub fn from_t<T: CLTyped + ToBytes>(t: T) -> Result<Value> {
+    pub fn from_t<T: CLTyped + Serialize>(t: T) -> Result<Value> {
         let cl_value = CLValue::from_t(t)?;
         let inner = StoredValue::CLValue(cl_value);
         Ok(Value { inner })
     }
 
     /// Consumes and converts `self` back into its underlying type.
-    pub fn into_t<T: CLTyped + FromBytes>(self) -> Result<T> {
+    pub fn into_t<T: CLTyped + DeserializeOwned>(self) -> Result<T> {
         let cl_value = CLValue::try_from(self.inner)?;
         Ok(cl_value.into_t()?)
     }

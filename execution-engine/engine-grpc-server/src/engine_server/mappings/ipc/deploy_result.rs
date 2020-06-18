@@ -47,7 +47,7 @@ impl From<(EngineStateError, ExecutionEffect, Gas)> for DeployResult {
             error @ EngineStateError::InsufficientPayment
             | error @ EngineStateError::Deploy
             | error @ EngineStateError::Finalization
-            | error @ EngineStateError::Serialization(_)
+            | error @ EngineStateError::Encoding(_)
             | error @ EngineStateError::Mint(_) => detail::execution_error(error, effect, cost),
             EngineStateError::Exec(exec_error) => (exec_error, effect, cost).into(),
         }
@@ -143,7 +143,7 @@ mod tests {
     use std::convert::TryInto;
 
     use engine_shared::{additive_map::AdditiveMap, transform::Transform};
-    use types::{bytesrepr::Error as BytesReprError, AccessRights, ApiError, Key, URef, U512};
+    use types::{encoding::Error as EncodingError, AccessRights, ApiError, Key, URef, U512};
 
     use super::*;
 
@@ -203,9 +203,9 @@ mod tests {
         let cost = Gas::new(U512::from(100));
         // TODO: actually create an Rkv error
         // assert_eq!(test_cost(cost, RkvError("Error".to_owned())), cost);
-        let bytesrepr_err = BytesReprError::EarlyEndOfStream;
+        let encoding_err = EncodingError::EndOfSlice;
         assert_eq!(
-            test_cost(cost, ExecutionError::BytesRepr(bytesrepr_err)),
+            test_cost(cost, ExecutionError::Encoding(encoding_err)),
             cost
         );
     }

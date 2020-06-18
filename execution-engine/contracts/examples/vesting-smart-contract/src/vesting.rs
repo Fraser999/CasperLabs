@@ -1,14 +1,12 @@
 use core::convert::TryInto;
 
+use serde::{de::DeserializeOwned, Serialize};
+
 use contract::{
     contract_api::{runtime, storage, system},
     unwrap_or_revert::UnwrapOrRevert,
 };
-use types::{
-    account::PublicKey,
-    bytesrepr::{FromBytes, ToBytes},
-    CLTyped, URef, U512,
-};
+use types::{account::PublicKey, CLTyped, URef, U512};
 
 use crate::{api::Api, error::Error};
 use vesting_logic::{VestingError, VestingTrait};
@@ -163,7 +161,7 @@ fn local_purse() -> URef {
     key.into_uref().unwrap_or_revert_with(Error::UnexpectedType)
 }
 
-fn key<T: FromBytes + CLTyped>(name: &str) -> T {
+fn key<T: CLTyped + DeserializeOwned>(name: &str) -> T {
     let key = runtime::get_key(name)
         .unwrap_or_revert_with(Error::MissingKey)
         .try_into()
@@ -173,7 +171,7 @@ fn key<T: FromBytes + CLTyped>(name: &str) -> T {
         .unwrap_or_revert_with(Error::UnexpectedType)
 }
 
-fn set_key<T: ToBytes + CLTyped>(name: &str, value: T) {
+fn set_key<T: CLTyped + Serialize>(name: &str, value: T) {
     match runtime::get_key(name) {
         Some(key) => {
             let key_ref = key.try_into().unwrap_or_revert();

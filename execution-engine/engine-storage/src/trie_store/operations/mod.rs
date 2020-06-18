@@ -3,11 +3,13 @@ mod tests;
 
 use std::{cmp, collections::VecDeque, mem, time::Instant};
 
+use serde::{de::DeserializeOwned, Serialize};
+
 use engine_shared::{
     logging::{log_duration, log_metric},
     newtypes::{Blake2bHash, CorrelationId},
 };
-use types::bytesrepr::{self, FromBytes, ToBytes};
+use types::encoding;
 
 use crate::{
     transaction_source::{Readable, Writable},
@@ -44,14 +46,14 @@ pub fn read<K, V, T, S, E>(
     key: &K,
 ) -> Result<ReadResult<V>, E>
 where
-    K: ToBytes + FromBytes + Eq + std::fmt::Debug,
-    V: ToBytes + FromBytes,
+    K: Serialize + DeserializeOwned + Eq + std::fmt::Debug,
+    V: Serialize + DeserializeOwned,
     T: Readable<Handle = S::Handle>,
     S: TrieStore<K, V>,
     S::Error: From<T::Error>,
-    E: From<S::Error> + From<types::bytesrepr::Error>,
+    E: From<S::Error> + From<types::encoding::Error>,
 {
-    let path: Vec<u8> = key.to_bytes()?;
+    let path: Vec<u8> = encoding::serialize(key)?;
 
     let mut depth: usize = 0;
     let mut current: Trie<K, V> = match store.get(txn, root)? {
@@ -222,12 +224,12 @@ fn scan<K, V, T, S, E>(
     root: &Trie<K, V>,
 ) -> Result<TrieScan<K, V>, E>
 where
-    K: ToBytes + FromBytes + Clone,
-    V: ToBytes + FromBytes + Clone,
+    K: Serialize + DeserializeOwned + Clone,
+    V: Serialize + DeserializeOwned + Clone,
     T: Readable<Handle = S::Handle>,
     S: TrieStore<K, V>,
     S::Error: From<T::Error>,
-    E: From<S::Error> + From<types::bytesrepr::Error>,
+    E: From<S::Error> + From<types::encoding::Error>,
 {
     let start = Instant::now();
     let mut get_counter: i32 = 0;
@@ -375,14 +377,14 @@ where
 fn rehash<K, V>(
     mut tip: Trie<K, V>,
     parents: Parents<K, V>,
-) -> Result<Vec<(Blake2bHash, Trie<K, V>)>, bytesrepr::Error>
+) -> Result<Vec<(Blake2bHash, Trie<K, V>)>, encoding::Error>
 where
-    K: ToBytes + Clone,
-    V: ToBytes + Clone,
+    K: Serialize + Clone,
+    V: Serialize + Clone,
 {
     let mut ret: Vec<(Blake2bHash, Trie<K, V>)> = Vec::new();
     let mut tip_hash = {
-        let trie_bytes = tip.to_bytes()?;
+        let trie_bytes = encoding::serialize(&tip)?;
         Blake2bHash::new(&trie_bytes)
     };
     ret.push((tip_hash, tip.to_owned()));
@@ -403,7 +405,7 @@ where
                     Trie::Node { pointer_block }
                 };
                 tip_hash = {
-                    let node_bytes = tip.to_bytes()?;
+                    let node_bytes = encoding::serialize(&tip)?;
                     Blake2bHash::new(&node_bytes)
                 };
                 ret.push((tip_hash, tip.to_owned()))
@@ -414,7 +416,7 @@ where
                     Trie::Extension { affix, pointer }
                 };
                 tip_hash = {
-                    let extension_bytes = tip.to_bytes()?;
+                    let extension_bytes = encoding::serialize(&tip)?;
                     Blake2bHash::new(&extension_bytes)
                 };
                 ret.push((tip_hash, tip.to_owned()))
@@ -453,10 +455,10 @@ fn add_node_to_parents<K, V>(
     path_to_leaf: &[u8],
     new_parent_node: Trie<K, V>,
     mut parents: Parents<K, V>,
-) -> Result<Parents<K, V>, bytesrepr::Error>
+) -> Result<Parents<K, V>, encoding::Error>
 where
-    K: ToBytes,
-    V: ToBytes,
+    K: Serialize,
+    V: Serialize,
 {
     // TODO: add is_node() method to Trie
     match new_parent_node {
@@ -497,10 +499,10 @@ fn reparent_leaf<K, V>(
     new_leaf_path: &[u8],
     existing_leaf_path: &[u8],
     parents: Parents<K, V>,
-) -> Result<(Trie<K, V>, Parents<K, V>), bytesrepr::Error>
+) -> Result<(Trie<K, V>, Parents<K, V>), encoding::Error>
 where
-    K: ToBytes,
-    V: ToBytes,
+    K: Serialize,
+    V: Serialize,
 {
     let mut parents = parents;
     let (child_index, parent) = parents.pop().expect("parents should not be empty");
@@ -528,7 +530,7 @@ where
     // If the affix is non-empty, create an extension node and add it
     // to parents.
     if !affix.is_empty() {
-        let new_node_bytes = new_node.to_bytes()?;
+        let new_node_bytes = encoding::serialize(&new_node)?;
         let new_node_hash = Blake2bHash::new(&new_node_bytes);
         let new_extension = Trie::extension(affix.to_vec(), Pointer::NodePointer(new_node_hash));
         parents.push((child_index, new_extension));
@@ -554,10 +556,10 @@ fn split_extension<K, V>(
     new_leaf_path: &[u8],
     existing_extension: Trie<K, V>,
     mut parents: Parents<K, V>,
-) -> Result<SplitResult<K, V>, bytesrepr::Error>
+) -> Result<SplitResult<K, V>, encoding::Error>
 where
-    K: ToBytes + Clone,
-    V: ToBytes + Clone,
+    K: Serialize + Clone,
+    V: Serialize + Clone,
 {
     // TODO: add is_extension() method to Trie
     let (affix, pointer) = match existing_extension {
@@ -582,7 +584,7 @@ where
             None
         } else {
             let child_extension = Trie::extension(child_extension_affix.to_vec(), pointer);
-            let child_extension_bytes = child_extension.to_bytes()?;
+            let child_extension_bytes = encoding::serialize(&child_extension)?;
             let child_extension_hash = Blake2bHash::new(&child_extension_bytes);
             Some((child_extension_hash, child_extension))
         };
@@ -596,7 +598,7 @@ where
     };
     // Create a parent extension if necessary
     if !parent_extension_affix.is_empty() {
-        let new_node_bytes = new_node.to_bytes()?;
+        let new_node_bytes = encoding::serialize(&new_node)?;
         let new_node_hash = Blake2bHash::new(&new_node_bytes);
         let parent_extension = Trie::extension(
             parent_extension_affix.to_vec(),
@@ -627,12 +629,12 @@ pub fn write<K, V, T, S, E>(
     value: &V,
 ) -> Result<WriteResult, E>
 where
-    K: ToBytes + FromBytes + Clone + Eq + std::fmt::Debug,
-    V: ToBytes + FromBytes + Clone + Eq,
+    K: Serialize + DeserializeOwned + Clone + Eq + std::fmt::Debug,
+    V: Serialize + DeserializeOwned + Clone + Eq,
     T: Readable<Handle = S::Handle> + Writable<Handle = S::Handle>,
     S: TrieStore<K, V>,
     S::Error: From<T::Error>,
-    E: From<S::Error> + From<types::bytesrepr::Error>,
+    E: From<S::Error> + From<types::encoding::Error>,
 {
     let start = Instant::now();
     let mut put_counter: i32 = 0;
@@ -644,7 +646,7 @@ where
                 key: key.to_owned(),
                 value: value.to_owned(),
             };
-            let path: Vec<u8> = key.to_bytes()?;
+            let path: Vec<u8> = encoding::serialize(key)?;
             let TrieScan { tip, parents } =
                 scan::<K, V, T, S, E>(correlation_id, txn, store, &path, &current_root)?;
             let new_elements: Vec<(Blake2bHash, Trie<K, V>)> = match tip {
@@ -666,7 +668,7 @@ where
                     key: ref existing_leaf_key,
                     ..
                 } if key != existing_leaf_key => {
-                    let existing_leaf_path = existing_leaf_key.to_bytes()?;
+                    let existing_leaf_path = encoding::serialize(existing_leaf_key)?;
                     let (new_node, parents) = reparent_leaf(&path, &existing_leaf_path, parents)?;
                     let parents = add_node_to_parents(&path, new_node, parents)?;
                     rehash(new_leaf, parents)?
@@ -756,11 +758,11 @@ pub struct KeysIterator<'a, 'b, K, V, T, S: TrieStore<K, V>> {
 
 impl<'a, 'b, K, V, T, S> Iterator for KeysIterator<'a, 'b, K, V, T, S>
 where
-    K: ToBytes + FromBytes + Clone + Eq + std::fmt::Debug,
-    V: ToBytes + FromBytes + Clone + Eq + std::fmt::Debug,
+    K: Serialize + DeserializeOwned + Clone + Eq + std::fmt::Debug,
+    V: Serialize + DeserializeOwned + Clone + Eq + std::fmt::Debug,
     T: Readable<Handle = S::Handle>,
     S: TrieStore<K, V>,
-    S::Error: From<T::Error> + From<types::bytesrepr::Error>,
+    S::Error: From<T::Error> + From<types::encoding::Error>,
 {
     type Item = Result<K, S::Error>;
 
@@ -785,7 +787,7 @@ where
 
             match trie {
                 Trie::Leaf { key, .. } => {
-                    let key_bytes = match key.to_bytes() {
+                    let key_bytes = match encoding::serialize(&key) {
                         Ok(bytes) => bytes,
                         Err(e) => {
                             self.state = KeysIteratorState::Failed;
@@ -890,8 +892,8 @@ pub fn keys<'a, 'b, K, V, T, S>(
     root: &Blake2bHash,
 ) -> KeysIterator<'a, 'b, K, V, T, S>
 where
-    K: ToBytes + FromBytes + Clone + Eq + std::fmt::Debug,
-    V: ToBytes + FromBytes + Clone + Eq + std::fmt::Debug,
+    K: Serialize + DeserializeOwned + Clone + Eq + std::fmt::Debug,
+    V: Serialize + DeserializeOwned + Clone + Eq + std::fmt::Debug,
     T: Readable<Handle = S::Handle>,
     S: TrieStore<K, V>,
     S::Error: From<T::Error>,
@@ -911,8 +913,8 @@ pub fn keys_with_prefix<'a, 'b, K, V, T, S>(
     prefix: &[u8],
 ) -> KeysIterator<'a, 'b, K, V, T, S>
 where
-    K: ToBytes + FromBytes + Clone + Eq + std::fmt::Debug,
-    V: ToBytes + FromBytes + Clone + Eq + std::fmt::Debug,
+    K: Serialize + DeserializeOwned + Clone + Eq + std::fmt::Debug,
+    V: Serialize + DeserializeOwned + Clone + Eq + std::fmt::Debug,
     T: Readable<Handle = S::Handle>,
     S: TrieStore<K, V>,
     S::Error: From<T::Error>,

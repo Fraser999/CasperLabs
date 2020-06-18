@@ -13,5 +13,6 @@ bench = false
 
 [dependencies]
 contract = { path = "../../../contract", package = "casperlabs-contract" }
+serde = { version = "1", default-features = false, features = ["derive"] }
 types = { path = "../../../types", package = "casperlabs-types" }
 vesting-logic  = { path = "../vesting-logic" }

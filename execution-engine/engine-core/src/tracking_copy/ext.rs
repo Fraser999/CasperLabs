@@ -5,7 +5,7 @@ use engine_shared::{
     stored_value::StoredValue, TypeMismatch,
 };
 use engine_storage::global_state::StateReader;
-use types::{account::PublicKey, bytesrepr::ToBytes, CLValue, Key, URef, U512};
+use types::{account::PublicKey, encoding, CLValue, Key, URef, U512};
 
 use crate::{execution, tracking_copy::TrackingCopy};
 
@@ -74,7 +74,7 @@ where
         let uref = outer_key
             .as_uref()
             .ok_or_else(|| execution::Error::URefNotFound("public purse balance".to_string()))?;
-        let local_key_bytes = uref.addr().into_bytes()?;
+        let local_key_bytes = encoding::serialize(&uref.addr())?;
         let balance_mapping_key = Key::local(mint_contract_uref.addr(), &local_key_bytes);
         match self
             .read(correlation_id, &balance_mapping_key)

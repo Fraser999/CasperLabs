@@ -1,7 +1,6 @@
 use lmdb::DatabaseFlags;
+use serde::{de::DeserializeOwned, Serialize};
 use tempfile::tempdir;
-
-use types::bytesrepr::{FromBytes, ToBytes};
 
 use super::TestData;
 use crate::{
@@ -21,8 +20,8 @@ fn put_succeeds<'a, K, V, S, X, E>(
     items: &[TestData<K, V>],
 ) -> Result<(), E>
 where
-    K: ToBytes,
-    V: ToBytes,
+    K: Serialize,
+    V: Serialize,
     S: TrieStore<K, V>,
     X: TransactionSource<'a, Handle = S::Handle>,
     S::Error: From<X::Error>,
@@ -62,8 +61,8 @@ fn put_get_succeeds<'a, K, V, S, X, E>(
     items: &[TestData<K, V>],
 ) -> Result<Vec<Option<Trie<K, V>>>, E>
 where
-    K: ToBytes + FromBytes,
-    V: ToBytes + FromBytes,
+    K: Serialize + DeserializeOwned,
+    V: Serialize + DeserializeOwned,
     S: TrieStore<K, V>,
     X: TransactionSource<'a, Handle = S::Handle>,
     S::Error: From<X::Error>,
@@ -166,8 +165,8 @@ fn uncommitted_read_write_txn_does_not_persist<'a, K, V, S, X, E>(
     items: &[TestData<K, V>],
 ) -> Result<Vec<Option<Trie<K, V>>>, E>
 where
-    K: ToBytes + FromBytes,
-    V: ToBytes + FromBytes,
+    K: Serialize + DeserializeOwned,
+    V: Serialize + DeserializeOwned,
     S: TrieStore<K, V>,
     X: TransactionSource<'a, Handle = S::Handle>,
     S::Error: From<X::Error>,
@@ -260,7 +259,7 @@ where
     S: TrieStore<Vec<u8>, Vec<u8>>,
     X: TransactionSource<'a, Handle = S::Handle>,
     S::Error: From<X::Error>,
-    E: From<S::Error> + From<X::Error> + From<types::bytesrepr::Error>,
+    E: From<S::Error> + From<X::Error> + From<types::encoding::Error>,
 {
     let TestData(leaf_1_hash, leaf_1) = &super::create_data()[0..1][0];
 
@@ -312,7 +311,7 @@ where
     S: TrieStore<Vec<u8>, Vec<u8>>,
     X: TransactionSource<'a, Handle = S::Handle>,
     S::Error: From<X::Error>,
-    E: From<S::Error> + From<X::Error> + From<types::bytesrepr::Error>,
+    E: From<S::Error> + From<X::Error> + From<types::encoding::Error>,
 {
     let data = super::create_data();
     let TestData(ref leaf_1_hash, ref leaf_1) = data[0];
@@ -368,7 +367,7 @@ where
     S: TrieStore<Vec<u8>, Vec<u8>>,
     X: TransactionSource<'a, Handle = S::Handle>,
     S::Error: From<X::Error>,
-    E: From<S::Error> + From<X::Error> + From<types::bytesrepr::Error>,
+    E: From<S::Error> + From<X::Error> + From<types::encoding::Error>,
 {
     let data = super::create_data();
     let TestData(ref leaf_1_hash, ref leaf_1) = data[0];
@@ -435,7 +434,7 @@ where
     S: TrieStore<Vec<u8>, Vec<u8>>,
     X: TransactionSource<'a, Handle = S::Handle>,
     S::Error: From<X::Error>,
-    E: From<S::Error> + From<X::Error> + From<types::bytesrepr::Error>,
+    E: From<S::Error> + From<X::Error> + From<types::encoding::Error>,
 {
     let data = super::create_data();
     let TestData(ref leaf_1_hash, ref leaf_1) = data[0];
@@ -498,7 +497,7 @@ where
     S: TrieStore<Vec<u8>, Vec<u8>>,
     X: TransactionSource<'a, Handle = S::Handle>,
     S::Error: From<X::Error>,
-    E: From<S::Error> + From<X::Error> + From<types::bytesrepr::Error>,
+    E: From<S::Error> + From<X::Error> + From<types::encoding::Error>,
 {
     let data = super::create_data();
     let TestData(ref leaf_1_hash, ref leaf_1) = data[0];

@@ -2,19 +2,9 @@ use std::convert::TryFrom;
 
 use serde::{Deserialize, Serialize};
 
-use types::{
-    bytesrepr::{self, FromBytes, ToBytes, U8_SERIALIZED_LENGTH},
-    CLValue,
-};
+use types::CLValue;
 
 use crate::{account::Account, contract::Contract, TypeMismatch};
-
-#[repr(u8)]
-enum Tag {
-    CLValue = 0,
-    Account = 1,
-    Contract = 2,
-}
 
 #[derive(Eq, PartialEq, Clone, Debug, Serialize, Deserialize)]
 pub enum StoredValue {
@@ -96,44 +86,6 @@ impl TryFrom<StoredValue> for Contract {
     }
 }
 
-impl ToBytes for StoredValue {
-    fn to_bytes(&self) -> Result<Vec<u8>, bytesrepr::Error> {
-        let mut result = bytesrepr::allocate_buffer(self)?;
-        let (tag, mut serialized_data) = match self {
-            StoredValue::CLValue(cl_value) => (Tag::CLValue, cl_value.to_bytes()?),
-            StoredValue::Account(account) => (Tag::Account, account.to_bytes()?),
-            StoredValue::Contract(contract) => (Tag::Contract, contract.to_bytes()?),
-        };
-        result.push(tag as u8);
-        result.append(&mut serialized_data);
-        Ok(result)
-    }
-
-    fn serialized_length(&self) -> usize {
-        U8_SERIALIZED_LENGTH
-            + match self {
-                StoredValue::CLValue(cl_value) => cl_value.serialized_length(),
-                StoredValue::Account(account) => account.serialized_length(),
-                StoredValue::Contract(contract) => contract.serialized_length(),
-            }
-    }
-}
-
-impl FromBytes for StoredValue {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), bytesrepr::Error> {
-        let (tag, remainder): (u8, &[u8]) = FromBytes::from_bytes(bytes)?;
-        match tag {
-            tag if tag == Tag::CLValue as u8 => CLValue::from_bytes(remainder)
-                .map(|(cl_value, remainder)| (StoredValue::CLValue(cl_value), remainder)),
-            tag if tag == Tag::Account as u8 => Account::from_bytes(remainder)
-                .map(|(account, remainder)| (StoredValue::Account(account), remainder)),
-            tag if tag == Tag::Contract as u8 => Contract::from_bytes(remainder)
-                .map(|(contract, remainder)| (StoredValue::Contract(contract), remainder)),
-            _ => Err(bytesrepr::Error::Formatting),
-        }
-    }
-}
-
 pub mod gens {
     use proptest::prelude::*;
 
@@ -155,12 +107,14 @@ pub mod gens {
 mod tests {
     use proptest::proptest;
 
+    use types::encoding;
+
     use super::*;
 
     proptest! {
         #[test]
         fn serialization_roundtrip(v in gens::stored_value_arb()) {
-            bytesrepr::test_serialization_roundtrip(&v);
+            encoding::test_serialization_roundtrip(&v);
         }
     }
 }

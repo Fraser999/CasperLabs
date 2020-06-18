@@ -1,12 +1,14 @@
 use std::{convert::TryFrom, rc::Rc};
 
+use serde::de::DeserializeOwned;
+
 use engine_core::engine_state::{execution_result::ExecutionResult, CONV_RATE};
 use engine_shared::motes::Motes;
 use engine_test_support::internal::{
     utils, ExecuteRequestBuilder, InMemoryWasmTestBuilder as TestBuilder,
     DEFAULT_RUN_GENESIS_REQUEST,
 };
-use types::{account::PublicKey, bytesrepr::FromBytes, ApiError, CLTyped, CLValue, Key, U512};
+use types::{account::PublicKey, ApiError, CLTyped, CLValue, Key, U512};
 
 const TRANFER_TO_ACCOUNT_WASM: &str = "transfer_to_account_u512.wasm";
 const VESTING_CONTRACT_WASM: &str = "vesting_smart_contract.wasm";
@@ -255,7 +257,7 @@ impl VestingTest {
         self
     }
 
-    fn get_value<T: FromBytes + CLTyped>(&self, name: &str) -> T {
+    fn get_value<T: CLTyped + DeserializeOwned>(&self, name: &str) -> T {
         let contract = self
             .builder
             .query(None, Key::Hash(self.get_vesting_hash()), &[])

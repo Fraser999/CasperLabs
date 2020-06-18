@@ -2,11 +2,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
-use types::{
-    account::{
-        AddKeyFailure, PublicKey, RemoveKeyFailure, UpdateKeyFailure, Weight, MAX_ASSOCIATED_KEYS,
-    },
-    bytesrepr::{Error, FromBytes, ToBytes},
+use types::account::{
+    AddKeyFailure, PublicKey, RemoveKeyFailure, UpdateKeyFailure, Weight, MAX_ASSOCIATED_KEYS,
 };
 
 #[derive(Default, PartialOrd, Ord, PartialEq, Eq, Clone, Debug, Serialize, Deserialize)]
@@ -106,30 +103,6 @@ impl AssociatedKeys {
     }
 }
 
-impl ToBytes for AssociatedKeys {
-    fn to_bytes(&self) -> Result<Vec<u8>, Error> {
-        self.0.to_bytes()
-    }
-
-    fn serialized_length(&self) -> usize {
-        self.0.serialized_length()
-    }
-}
-
-impl FromBytes for AssociatedKeys {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), Error> {
-        let (keys_map, rem) = BTreeMap::<PublicKey, Weight>::from_bytes(bytes)?;
-        let mut keys = AssociatedKeys::default();
-        keys_map.into_iter().for_each(|(k, v)| {
-            // NOTE: we're ignoring potential errors (duplicate key, maximum number of
-            // elements). This is safe, for now, as we were the ones that
-            // serialized `AssociatedKeys` in the first place.
-            keys.add_key(k, v).unwrap();
-        });
-        Ok((keys, rem))
-    }
-}
-
 pub mod gens {
     use proptest::prelude::*;
 
@@ -154,7 +127,7 @@ mod tests {
 
     use types::{
         account::{AddKeyFailure, PublicKey, Weight, ED25519_LENGTH, MAX_ASSOCIATED_KEYS},
-        bytesrepr,
+        encoding,
     };
 
     use super::AssociatedKeys;
@@ -327,6 +300,6 @@ mod tests {
             .unwrap();
         keys.add_key(PublicKey::ed25519_from([3; 32]), Weight::new(3))
             .unwrap();
-        bytesrepr::test_serialization_roundtrip(&keys);
+        encoding::test_serialization_roundtrip(&keys);
     }
 }

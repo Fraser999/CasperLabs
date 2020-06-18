@@ -1,6 +1,6 @@
 //! Contains types and constants associated with user accounts.
 
-use alloc::{boxed::Box, vec::Vec};
+use alloc::boxed::Box;
 use core::{
     convert::TryFrom,
     fmt::{self, Debug, Display, Formatter},
@@ -13,10 +13,7 @@ use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
 };
 
-use crate::{
-    bytesrepr::{Error, FromBytes, ToBytes, U8_SERIALIZED_LENGTH},
-    CLType, CLTyped,
-};
+use crate::{CLType, CLTyped};
 
 // This error type is not intended to be used by third party crates.
 #[doc(hidden)]
@@ -106,9 +103,6 @@ impl TryFrom<i32> for SetThresholdFailure {
 /// account.
 pub const MAX_ASSOCIATED_KEYS: usize = 10;
 
-/// The number of bytes in a serialized [`Weight`].
-pub const WEIGHT_SERIALIZED_LENGTH: usize = U8_SERIALIZED_LENGTH;
-
 /// The weight attributed to a given [`PublicKey`] in an account's associated keys.
 #[derive(PartialOrd, Ord, PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct Weight(u8);
@@ -125,23 +119,6 @@ impl Weight {
     }
 }
 
-impl ToBytes for Weight {
-    fn to_bytes(&self) -> Result<Vec<u8>, Error> {
-        self.0.to_bytes()
-    }
-
-    fn serialized_length(&self) -> usize {
-        WEIGHT_SERIALIZED_LENGTH
-    }
-}
-
-impl FromBytes for Weight {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), Error> {
-        let (byte, rem) = u8::from_bytes(bytes)?;
-        Ok((Weight::new(byte), rem))
-    }
-}
-
 impl CLTyped for Weight {
     fn cl_type() -> CLType {
         CLType::U8
@@ -149,12 +126,6 @@ impl CLTyped for Weight {
 }
 /// The length in bytes of a [`PublicKey`].
 pub const ED25519_LENGTH: usize = 32;
-
-/// The number of bytes in a serialized [`Ed25519`].
-pub const ED25519_SERIALIZED_LENGTH: usize = ED25519_LENGTH;
-
-/// The upper bound of bytes in a serialized [`PublicKey`].
-pub const PUBLIC_KEY_SERIALIZED_MAX_LENGTH: usize = ED25519_SERIALIZED_LENGTH;
 
 /// A type alias for the raw bytes of an Ed25519 public key.
 pub type Ed25519Bytes = [u8; ED25519_LENGTH];
@@ -184,23 +155,6 @@ impl Ed25519 {
 impl Display for Ed25519 {
     fn fmt(&self, f: &mut Formatter) -> core::fmt::Result {
         write!(f, "Ed25519({})", HexFmt(&self.0))
-    }
-}
-
-impl ToBytes for Ed25519 {
-    fn to_bytes(&self) -> Result<Vec<u8>, Error> {
-        self.0.to_bytes()
-    }
-
-    fn serialized_length(&self) -> usize {
-        ED25519_SERIALIZED_LENGTH
-    }
-}
-
-impl FromBytes for Ed25519 {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), Error> {
-        let (bytes, rem) = <[u8; 32]>::from_bytes(bytes)?;
-        Ok((Ed25519::new(bytes), rem))
     }
 }
 
@@ -296,26 +250,6 @@ impl CLTyped for PublicKey {
 impl From<Ed25519> for PublicKey {
     fn from(ed25519: Ed25519) -> PublicKey {
         PublicKey::Ed25519(ed25519)
-    }
-}
-
-impl ToBytes for PublicKey {
-    fn to_bytes(&self) -> Result<Vec<u8>, Error> {
-        let PublicKey::Ed25519(ed25519) = self;
-        let mut bytes = Vec::with_capacity(PUBLIC_KEY_SERIALIZED_MAX_LENGTH);
-        bytes.append(&mut ed25519.to_bytes()?);
-        Ok(bytes)
-    }
-
-    fn serialized_length(&self) -> usize {
-        PUBLIC_KEY_SERIALIZED_MAX_LENGTH
-    }
-}
-
-impl FromBytes for PublicKey {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), Error> {
-        let (ed25519, rem) = Ed25519::from_bytes(bytes)?;
-        Ok((PublicKey::from(ed25519), rem))
     }
 }
 

@@ -4,16 +4,16 @@ extern crate alloc;
 
 use alloc::string::String;
 
+use serde::{de::DeserializeOwned, Serialize};
+
 use contract::{
     contract_api::{runtime, storage},
     unwrap_or_revert::UnwrapOrRevert,
 };
 use mint::{Mint, RuntimeProvider, StorageProvider};
 use types::{
-    account::PublicKey,
-    bytesrepr::{FromBytes, ToBytes},
-    system_contract_errors::mint::Error,
-    ApiError, CLTyped, CLValue, Key, URef, U512,
+    account::PublicKey, system_contract_errors::mint::Error, ApiError, CLTyped, CLValue, Key, URef,
+    U512,
 };
 
 const METHOD_MINT: &str = "mint";
@@ -34,31 +34,31 @@ impl RuntimeProvider for MintContract {
 }
 
 impl StorageProvider for MintContract {
-    fn new_uref<T: CLTyped + ToBytes>(&mut self, init: T) -> URef {
+    fn new_uref<T: CLTyped + Serialize>(&mut self, init: T) -> URef {
         storage::new_uref(init)
     }
 
-    fn write_local<K: ToBytes, V: CLTyped + ToBytes>(&mut self, key: K, value: V) {
+    fn write_local<K: Serialize, V: CLTyped + Serialize>(&mut self, key: K, value: V) {
         storage::write_local(key, value)
     }
 
-    fn read_local<K: ToBytes, V: CLTyped + FromBytes>(
+    fn read_local<K: Serialize, V: CLTyped + DeserializeOwned>(
         &mut self,
         key: &K,
     ) -> Result<Option<V>, Error> {
         storage::read_local(key).map_err(|_| Error::Storage)
     }
 
-    fn read<T: CLTyped + FromBytes>(&mut self, uref: URef) -> Result<Option<T>, Error> {
+    fn read<T: CLTyped + DeserializeOwned>(&mut self, uref: URef) -> Result<Option<T>, Error> {
         storage::read(uref).map_err(|_| Error::Storage)
     }
 
-    fn write<T: CLTyped + ToBytes>(&mut self, uref: URef, value: T) -> Result<(), Error> {
+    fn write<T: CLTyped + Serialize>(&mut self, uref: URef, value: T) -> Result<(), Error> {
         storage::write(uref, value);
         Ok(())
     }
 
-    fn add<T: CLTyped + ToBytes>(&mut self, uref: URef, value: T) -> Result<(), Error> {
+    fn add<T: CLTyped + Serialize>(&mut self, uref: URef, value: T) -> Result<(), Error> {
         storage::add(uref, value);
         Ok(())
     }

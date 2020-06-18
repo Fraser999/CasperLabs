@@ -10,7 +10,6 @@ use types::{
         ActionType, AddKeyFailure, PublicKey, RemoveKeyFailure, SetThresholdFailure,
         UpdateKeyFailure, Weight,
     },
-    bytesrepr::{self, Error, FromBytes, ToBytes},
     AccessRights, Key, URef,
 };
 
@@ -201,46 +200,6 @@ impl Account {
     }
 }
 
-impl ToBytes for Account {
-    fn to_bytes(&self) -> Result<Vec<u8>, Error> {
-        let mut result = bytesrepr::allocate_buffer(self)?;
-        result.append(&mut self.public_key.to_bytes()?);
-        result.append(&mut self.named_keys.to_bytes()?);
-        result.append(&mut self.main_purse.to_bytes()?);
-        result.append(&mut self.associated_keys.to_bytes()?);
-        result.append(&mut self.action_thresholds.to_bytes()?);
-        Ok(result)
-    }
-
-    fn serialized_length(&self) -> usize {
-        self.public_key.serialized_length()
-            + self.named_keys.serialized_length()
-            + self.main_purse.serialized_length()
-            + self.associated_keys.serialized_length()
-            + self.action_thresholds.serialized_length()
-    }
-}
-
-impl FromBytes for Account {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), Error> {
-        let (public_key, rem) = PublicKey::from_bytes(bytes)?;
-        let (named_keys, rem) = BTreeMap::<String, Key>::from_bytes(rem)?;
-        let (main_purse, rem) = URef::from_bytes(rem)?;
-        let (associated_keys, rem) = AssociatedKeys::from_bytes(rem)?;
-        let (action_thresholds, rem) = ActionThresholds::from_bytes(rem)?;
-        Ok((
-            Account {
-                public_key,
-                named_keys,
-                main_purse,
-                associated_keys,
-                action_thresholds,
-            },
-            rem,
-        ))
-    }
-}
-
 pub mod gens {
     use proptest::prelude::*;
 
@@ -278,14 +237,14 @@ pub mod gens {
 mod proptests {
     use proptest::prelude::*;
 
-    use types::bytesrepr;
+    use types::encoding;
 
     use super::*;
 
     proptest! {
         #[test]
         fn test_value_account(acct in gens::account_arb()) {
-            bytesrepr::test_serialization_roundtrip(&acct);
+            encoding::test_serialization_roundtrip(&acct);
         }
     }
 }

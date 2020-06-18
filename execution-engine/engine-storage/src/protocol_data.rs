@@ -1,13 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use engine_wasm_prep::wasm_costs::{WasmCosts, WASM_COSTS_SERIALIZED_LENGTH};
-use types::{
-    bytesrepr::{self, FromBytes, ToBytes},
-    AccessRights, URef, UREF_SERIALIZED_LENGTH,
-};
+use engine_wasm_prep::wasm_costs::WasmCosts;
+use types::{AccessRights, URef};
 
-const PROTOCOL_DATA_SERIALIZED_LENGTH: usize =
-    WASM_COSTS_SERIALIZED_LENGTH + 3 * UREF_SERIALIZED_LENGTH;
 const DEFAULT_UREF_ADDRESS: [u8; 32] = [0; 32];
 
 /// Represents a protocol's data. Intended to be associated with a given protocol version.
@@ -110,39 +105,6 @@ impl ProtocolData {
     }
 }
 
-impl ToBytes for ProtocolData {
-    fn to_bytes(&self) -> Result<Vec<u8>, bytesrepr::Error> {
-        let mut ret = bytesrepr::unchecked_allocate_buffer(self);
-        ret.append(&mut self.wasm_costs.to_bytes()?);
-        ret.append(&mut self.mint.to_bytes()?);
-        ret.append(&mut self.proof_of_stake.to_bytes()?);
-        ret.append(&mut self.standard_payment.to_bytes()?);
-        Ok(ret)
-    }
-
-    fn serialized_length(&self) -> usize {
-        PROTOCOL_DATA_SERIALIZED_LENGTH
-    }
-}
-
-impl FromBytes for ProtocolData {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), bytesrepr::Error> {
-        let (wasm_costs, rem) = WasmCosts::from_bytes(bytes)?;
-        let (mint, rem) = URef::from_bytes(rem)?;
-        let (proof_of_stake, rem) = URef::from_bytes(rem)?;
-        let (standard_payment, rem) = URef::from_bytes(rem)?;
-        Ok((
-            ProtocolData {
-                wasm_costs,
-                mint,
-                proof_of_stake,
-                standard_payment,
-            },
-            rem,
-        ))
-    }
-}
-
 #[cfg(test)]
 pub(crate) mod gens {
     use proptest::prop_compose;
@@ -174,7 +136,7 @@ mod tests {
     use proptest::proptest;
 
     use engine_wasm_prep::wasm_costs::WasmCosts;
-    use types::{bytesrepr, AccessRights, URef};
+    use types::{encoding, AccessRights, URef};
 
     use super::{gens, ProtocolData};
 
@@ -234,8 +196,8 @@ mod tests {
                 standard_payment_reference,
             )
         };
-        bytesrepr::test_serialization_roundtrip(&mock);
-        bytesrepr::test_serialization_roundtrip(&free);
+        encoding::test_serialization_roundtrip(&mock);
+        encoding::test_serialization_roundtrip(&free);
     }
 
     #[test]
@@ -298,7 +260,7 @@ mod tests {
         fn should_serialize_and_deserialize_with_arbitrary_values(
             protocol_data in gens::protocol_data_arb()
         ) {
-            bytesrepr::test_serialization_roundtrip(&protocol_data);
+            encoding::test_serialization_roundtrip(&protocol_data);
         }
     }
 }

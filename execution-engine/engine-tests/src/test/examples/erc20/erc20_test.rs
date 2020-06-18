@@ -6,7 +6,7 @@ use engine_test_support::internal::{
     utils, ExecuteRequestBuilder, InMemoryWasmTestBuilder as TestBuilder,
     DEFAULT_RUN_GENESIS_REQUEST,
 };
-use types::{account::PublicKey, bytesrepr::ToBytes, ApiError, CLValue, Key, U512};
+use types::{account::PublicKey, encoding, ApiError, CLValue, Key, U512};
 
 const ERC_20_CONTRACT_WASM: &str = "erc20_smart_contract.wasm";
 const TRANFER_TO_ACCOUNT_WASM: &str = "transfer_to_account_u512.wasm";
@@ -271,7 +271,10 @@ impl ERC20Test {
         let mut balance_bytes: Vec<u8> = Vec::with_capacity(33);
         balance_bytes.extend(&[1]);
         balance_bytes.extend(address.as_bytes());
-        let balance_key = Key::local(self.get_token_hash(), &balance_bytes.to_bytes().unwrap());
+        let balance_key = Key::local(
+            self.get_token_hash(),
+            &encoding::serialize(&balance_bytes).unwrap(),
+        );
         let value: CLValue = self
             .builder
             .query(None, balance_key.clone(), &[])
@@ -314,7 +317,10 @@ impl ERC20Test {
             .chain(spender.as_bytes().iter())
             .copied()
             .collect();
-        let allowance_key = Key::local(self.get_token_hash(), &allowance_bytes.to_bytes().unwrap());
+        let allowance_key = Key::local(
+            self.get_token_hash(),
+            &encoding::serialize(&allowance_bytes).unwrap(),
+        );
         let value: CLValue = self
             .builder
             .query(None, allowance_key.clone(), &[])

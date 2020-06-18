@@ -1,11 +1,7 @@
-use alloc::vec::Vec;
-
 use serde::{Deserialize, Serialize};
 
-use crate::bytesrepr::{Error, FromBytes, ToBytes, U64_SERIALIZED_LENGTH};
-
 /// The number of bytes in a serialized [`BlockTime`].
-pub const BLOCKTIME_SERIALIZED_LENGTH: usize = U64_SERIALIZED_LENGTH;
+pub const BLOCKTIME_SERIALIZED_LENGTH: usize = 8;
 
 /// A newtype wrapping a [`u64`] which represents the block time.
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq, PartialOrd, Serialize, Deserialize)]
@@ -30,19 +26,15 @@ impl Into<u64> for BlockTime {
     }
 }
 
-impl ToBytes for BlockTime {
-    fn to_bytes(&self) -> Result<Vec<u8>, Error> {
-        self.0.to_bytes()
-    }
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    fn serialized_length(&self) -> usize {
-        BLOCKTIME_SERIALIZED_LENGTH
-    }
-}
+    use crate::encoding;
 
-impl FromBytes for BlockTime {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), Error> {
-        let (time, rem) = FromBytes::from_bytes(bytes)?;
-        Ok((BlockTime::new(time), rem))
+    #[test]
+    fn serialized_length() {
+        let actual_length = encoding::serialized_length(&BlockTime::new(0)).unwrap();
+        assert_eq!(actual_length as usize, BLOCKTIME_SERIALIZED_LENGTH);
     }
 }

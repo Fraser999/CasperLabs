@@ -2,10 +2,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use types::{
-    bytesrepr::{self, Error, FromBytes, ToBytes},
-    Key, ProtocolVersion,
-};
+use types::{Key, ProtocolVersion};
 
 #[derive(PartialEq, Eq, Clone, Debug, Serialize, Deserialize)]
 pub struct Contract {
@@ -53,38 +50,6 @@ impl Contract {
 
     pub fn take_named_keys(self) -> BTreeMap<String, Key> {
         self.named_keys
-    }
-}
-
-impl ToBytes for Contract {
-    fn to_bytes(&self) -> Result<Vec<u8>, Error> {
-        let mut result = bytesrepr::allocate_buffer(self)?;
-        result.append(&mut self.bytes.to_bytes()?);
-        result.append(&mut self.named_keys.to_bytes()?);
-        result.append(&mut self.protocol_version.to_bytes()?);
-        Ok(result)
-    }
-
-    fn serialized_length(&self) -> usize {
-        self.bytes.serialized_length()
-            + self.named_keys.serialized_length()
-            + self.protocol_version.serialized_length()
-    }
-}
-
-impl FromBytes for Contract {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), Error> {
-        let (bytes, rem1) = Vec::<u8>::from_bytes(bytes)?;
-        let (named_keys, rem2) = BTreeMap::<String, Key>::from_bytes(rem1)?;
-        let (protocol_version, rem3) = ProtocolVersion::from_bytes(rem2)?;
-        Ok((
-            Contract {
-                bytes,
-                named_keys,
-                protocol_version,
-            },
-            rem3,
-        ))
     }
 }
 
