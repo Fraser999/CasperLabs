@@ -1,20 +1,26 @@
 //! Some newtypes.
 mod macros;
 
-use core::array::TryFromSliceError;
-use std::{convert::TryFrom, fmt};
+use std::{
+    array::TryFromSliceError,
+    convert::TryFrom,
+    fmt::{self, Debug, Display, Formatter, LowerHex, UpperHex},
+};
 
 use blake2::{
     digest::{Input, VariableOutput},
     VarBlake2b,
 };
-use serde::{Deserialize, Serialize};
+use serde::{
+    de::{Error as SerdeError, Visitor},
+    Deserialize, Deserializer, Serialize, Serializer,
+};
 use uuid::Uuid;
 
 pub use types::BLAKE2B_DIGEST_LENGTH;
 
 /// Represents a 32-byte BLAKE2b hash digest
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Blake2bHash([u8; BLAKE2B_DIGEST_LENGTH]);
 
 impl Blake2bHash {
@@ -39,8 +45,8 @@ impl Blake2bHash {
     }
 }
 
-impl core::fmt::LowerHex for Blake2bHash {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+impl LowerHex for Blake2bHash {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         let hex_string = base16::encode_lower(&self.value());
         if f.alternate() {
             write!(f, "0x{}", hex_string)
@@ -50,8 +56,8 @@ impl core::fmt::LowerHex for Blake2bHash {
     }
 }
 
-impl core::fmt::UpperHex for Blake2bHash {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+impl UpperHex for Blake2bHash {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         let hex_string = base16::encode_upper(&self.value());
         if f.alternate() {
             write!(f, "0x{}", hex_string)
@@ -61,14 +67,14 @@ impl core::fmt::UpperHex for Blake2bHash {
     }
 }
 
-impl core::fmt::Display for Blake2bHash {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+impl Display for Blake2bHash {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "Blake2bHash({:#x})", self)
     }
 }
 
-impl core::fmt::Debug for Blake2bHash {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+impl Debug for Blake2bHash {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "{}", self)
     }
 }
@@ -87,9 +93,44 @@ impl<'a> TryFrom<&'a [u8]> for Blake2bHash {
     }
 }
 
-impl Into<[u8; BLAKE2B_DIGEST_LENGTH]> for Blake2bHash {
-    fn into(self) -> [u8; BLAKE2B_DIGEST_LENGTH] {
-        self.0
+impl From<Blake2bHash> for [u8; BLAKE2B_DIGEST_LENGTH] {
+    fn from(hash: Blake2bHash) -> Self {
+        hash.0
+    }
+}
+
+impl Serialize for Blake2bHash {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_bytes(self.0.as_ref())
+    }
+}
+
+impl<'de> Deserialize<'de> for Blake2bHash {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct BytesVisitor;
+
+        impl<'de> Visitor<'de> for BytesVisitor {
+            type Value = &'de [u8];
+
+            fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
+                formatter.write_str("a borrowed byte array")
+            }
+
+            fn visit_borrowed_bytes<E: serde::de::Error>(
+                self,
+                bytes: &'de [u8],
+            ) -> Result<Self::Value, E> {
+                Ok(bytes)
+            }
+        }
+
+        let bytes = deserializer.deserialize_bytes(BytesVisitor)?;
+        if bytes.len() != BLAKE2B_DIGEST_LENGTH {
+            return Err(SerdeError::invalid_length(bytes.len(), &"32"));
+        }
+        let mut array = [0; BLAKE2B_DIGEST_LENGTH];
+        array.copy_from_slice(bytes);
+        Ok(Blake2bHash(array))
     }
 }
 

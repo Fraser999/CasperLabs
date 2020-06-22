@@ -1,6 +1,15 @@
 //! Core types for a Merkle Trie
+use std::{
+    fmt::{self, Debug, Formatter},
+    mem::MaybeUninit,
+    ops::{Index, IndexMut, Range, RangeFrom, RangeFull, RangeTo},
+};
 
-use serde::{Deserialize, Serialize};
+use serde::{
+    de::{Error as SerdeError, SeqAccess, Visitor},
+    ser::SerializeTuple,
+    Deserialize, Deserializer, Serialize, Serializer,
+};
 
 use engine_shared::newtypes::Blake2bHash;
 
@@ -38,17 +47,9 @@ impl Pointer {
     }
 }
 
-// This is inside a private module so that the generated `BigArray` does not form part of this
-// crate's public API, and hence also doesn't appear in the rustdocs.
-mod big_array {
-    use serde_big_array::big_array;
-
-    big_array! { BigArray; }
-}
-
 /// Represents the underlying structure of a node in a Merkle Trie
-#[derive(Copy, Clone, Serialize, Deserialize)]
-pub struct PointerBlock(#[serde(with = "big_array::BigArray")] [Option<Pointer>; RADIX]);
+#[derive(Copy, Clone)]
+pub struct PointerBlock([Option<Pointer>; RADIX]);
 
 impl PointerBlock {
     pub fn new() -> Self {
@@ -85,7 +86,7 @@ impl Default for PointerBlock {
     }
 }
 
-impl core::ops::Index<usize> for PointerBlock {
+impl Index<usize> for PointerBlock {
     type Output = Option<Pointer>;
 
     #[inline]
@@ -95,7 +96,7 @@ impl core::ops::Index<usize> for PointerBlock {
     }
 }
 
-impl core::ops::IndexMut<usize> for PointerBlock {
+impl IndexMut<usize> for PointerBlock {
     #[inline]
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         let PointerBlock(dat) = self;
@@ -103,49 +104,49 @@ impl core::ops::IndexMut<usize> for PointerBlock {
     }
 }
 
-impl core::ops::Index<core::ops::Range<usize>> for PointerBlock {
+impl Index<Range<usize>> for PointerBlock {
     type Output = [Option<Pointer>];
 
     #[inline]
-    fn index(&self, index: core::ops::Range<usize>) -> &[Option<Pointer>] {
+    fn index(&self, index: Range<usize>) -> &[Option<Pointer>] {
         let &PointerBlock(ref dat) = self;
         &dat[index]
     }
 }
 
-impl core::ops::Index<core::ops::RangeTo<usize>> for PointerBlock {
+impl Index<RangeTo<usize>> for PointerBlock {
     type Output = [Option<Pointer>];
 
     #[inline]
-    fn index(&self, index: core::ops::RangeTo<usize>) -> &[Option<Pointer>] {
+    fn index(&self, index: RangeTo<usize>) -> &[Option<Pointer>] {
         let &PointerBlock(ref dat) = self;
         &dat[index]
     }
 }
 
-impl core::ops::Index<core::ops::RangeFrom<usize>> for PointerBlock {
+impl Index<RangeFrom<usize>> for PointerBlock {
     type Output = [Option<Pointer>];
 
     #[inline]
-    fn index(&self, index: core::ops::RangeFrom<usize>) -> &[Option<Pointer>] {
+    fn index(&self, index: RangeFrom<usize>) -> &[Option<Pointer>] {
         let &PointerBlock(ref dat) = self;
         &dat[index]
     }
 }
 
-impl core::ops::Index<core::ops::RangeFull> for PointerBlock {
+impl Index<RangeFull> for PointerBlock {
     type Output = [Option<Pointer>];
 
     #[inline]
-    fn index(&self, index: core::ops::RangeFull) -> &[Option<Pointer>] {
+    fn index(&self, index: RangeFull) -> &[Option<Pointer>] {
         let &PointerBlock(ref dat) = self;
         &dat[index]
     }
 }
 
-impl ::std::fmt::Debug for PointerBlock {
+impl Debug for PointerBlock {
     #[allow(clippy::assertions_on_constants)]
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         assert!(RADIX > 1, "RADIX must be > 1");
         write!(f, "{}([", stringify!(PointerBlock))?;
         write!(f, "{:?}", self.0[0])?;
@@ -156,12 +157,78 @@ impl ::std::fmt::Debug for PointerBlock {
     }
 }
 
+impl Serialize for PointerBlock {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut seq = serializer.serialize_tuple(RADIX)?;
+        for elem in &self[..] {
+            seq.serialize_element(elem)?;
+        }
+        seq.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for PointerBlock {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct ArrayVisitor;
+
+        impl<'de> Visitor<'de> for ArrayVisitor {
+            type Value = [Option<Pointer>; RADIX];
+
+            fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
+                write!(formatter, "an array of length {}", RADIX)
+            }
+
+            fn visit_seq<A: SeqAccess<'de>>(
+                self,
+                mut seq: A,
+            ) -> Result<[Option<Pointer>; RADIX], A::Error> {
+                let mut result: MaybeUninit<[Option<Pointer>; RADIX]> = MaybeUninit::uninit();
+                let result_ptr = result.as_mut_ptr() as *mut Option<Pointer>;
+                unsafe {
+                    for index in 0..RADIX {
+                        let cleanup = || {
+                            for j in 0..index {
+                                result_ptr.add(j).drop_in_place();
+                            }
+                        };
+                        let maybe_pointer: Option<Pointer> = match seq.next_element() {
+                            Ok(Some(maybe_pointer)) => maybe_pointer,
+                            Ok(None) => {
+                                cleanup();
+                                return Err(SerdeError::invalid_length(index, &self));
+                            }
+                            Err(error) => {
+                                cleanup();
+                                return Err(error);
+                            }
+                        };
+                        result_ptr.add(index).write(maybe_pointer);
+                    }
+                    Ok(result.assume_init())
+                }
+            }
+        }
+
+        let array = deserializer.deserialize_tuple(RADIX, ArrayVisitor)?;
+        Ok(PointerBlock(array))
+    }
+}
+
 /// Represents a Merkle Trie
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Trie<K, V> {
-    Leaf { key: K, value: V },
-    Node { pointer_block: Box<PointerBlock> },
-    Extension { affix: Vec<u8>, pointer: Pointer },
+    Leaf {
+        key: K,
+        value: V,
+    },
+    Node {
+        pointer_block: Box<PointerBlock>,
+    },
+    Extension {
+        #[serde(with = "serde_bytes")]
+        affix: Vec<u8>,
+        pointer: Pointer,
+    },
 }
 
 impl<K, V> Trie<K, V> {

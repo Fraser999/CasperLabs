@@ -6,6 +6,7 @@ use types::{Key, ProtocolVersion};
 
 #[derive(PartialEq, Eq, Clone, Debug, Serialize, Deserialize)]
 pub struct Contract {
+    #[serde(with = "serde_bytes")]
     bytes: Vec<u8>,
     named_keys: BTreeMap<String, Key>,
     protocol_version: ProtocolVersion,

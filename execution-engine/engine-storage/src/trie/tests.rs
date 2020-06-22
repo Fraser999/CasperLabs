@@ -1,3 +1,8 @@
+use super::*;
+
+use engine_shared::stored_value::StoredValue;
+use types::{account::PublicKey, encoding, CLValue, Key};
+
 #[test]
 fn radix_is_256() {
     assert_eq!(
@@ -5,6 +10,26 @@ fn radix_is_256() {
         256,
         "Changing RADIX alone might cause things to break"
     );
+}
+
+#[test]
+fn round_trip() {
+    let leaf = Trie::Leaf {
+        key: Key::Account(PublicKey::ed25519_from([0; 32])),
+        value: StoredValue::CLValue(CLValue::from_t(42_i32).unwrap()),
+    };
+    encoding::test_serialization_roundtrip(&leaf);
+
+    let node = Trie::<Key, StoredValue>::Node {
+        pointer_block: Box::new(PointerBlock::default()),
+    };
+    encoding::test_serialization_roundtrip(&node);
+
+    let extension = Trie::<Key, StoredValue>::Extension {
+        affix: (0..255).collect(),
+        pointer: Pointer::NodePointer(Blake2bHash::new(&[0; 32])),
+    };
+    encoding::test_serialization_roundtrip(&extension);
 }
 
 mod pointer_block {
