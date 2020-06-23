@@ -33,11 +33,11 @@ impl<'de> Deserializer<'de> {
 
     #[inline]
     /// Splits off the first `count` bytes from `self.input`.
-    fn take_bytes(&mut self, count: u32) -> Result<&'de [u8]> {
-        if count as usize > self.input.len() {
+    fn take_bytes(&mut self, count: usize) -> Result<&'de [u8]> {
+        if count > self.input.len() {
             Err(Error::EndOfSlice)
         } else {
-            let (removed, remainder) = self.input.split_at(count as usize);
+            let (removed, remainder) = self.input.split_at(count);
             self.input = remainder;
             Ok(removed)
         }
@@ -60,7 +60,7 @@ impl<'de> Deserializer<'de> {
     fn deserialize_length(&mut self) -> Result<u32> {
         const LENGTH: usize = mem::size_of::<u32>();
         let mut result = [0; LENGTH];
-        let bytes = self.take_bytes(LENGTH as u32)?;
+        let bytes = self.take_bytes(LENGTH)?;
         result.copy_from_slice(bytes);
         Ok(<u32>::from_le_bytes(result))
     }
@@ -101,7 +101,7 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut Deserializer<'de> {
     fn deserialize_u16<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
         const LENGTH: usize = mem::size_of::<u16>();
         let mut result = [0; LENGTH];
-        let bytes = self.take_bytes(LENGTH as u32)?;
+        let bytes = self.take_bytes(LENGTH)?;
         result.copy_from_slice(bytes);
         visitor.visit_u16(<u16>::from_le_bytes(result))
     }
@@ -115,7 +115,7 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut Deserializer<'de> {
     fn deserialize_u64<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
         const LENGTH: usize = mem::size_of::<u64>();
         let mut result = [0; LENGTH];
-        let bytes = self.take_bytes(LENGTH as u32)?;
+        let bytes = self.take_bytes(LENGTH)?;
         result.copy_from_slice(bytes);
         visitor.visit_u64(<u64>::from_le_bytes(result))
     }
@@ -129,7 +129,7 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut Deserializer<'de> {
     fn deserialize_i16<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
         const LENGTH: usize = mem::size_of::<i16>();
         let mut result = [0; LENGTH];
-        let bytes = self.take_bytes(LENGTH as u32)?;
+        let bytes = self.take_bytes(LENGTH)?;
         result.copy_from_slice(bytes);
         visitor.visit_i16(<i16>::from_le_bytes(result))
     }
@@ -138,7 +138,7 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut Deserializer<'de> {
     fn deserialize_i32<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
         const LENGTH: usize = mem::size_of::<i32>();
         let mut result = [0; LENGTH];
-        let bytes = self.take_bytes(LENGTH as u32)?;
+        let bytes = self.take_bytes(LENGTH)?;
         result.copy_from_slice(bytes);
         visitor.visit_i32(<i32>::from_le_bytes(result))
     }
@@ -147,7 +147,7 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut Deserializer<'de> {
     fn deserialize_i64<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
         const LENGTH: usize = mem::size_of::<i64>();
         let mut result = [0; LENGTH];
-        let bytes = self.take_bytes(LENGTH as u32)?;
+        let bytes = self.take_bytes(LENGTH)?;
         result.copy_from_slice(bytes);
         visitor.visit_i64(<i64>::from_le_bytes(result))
     }
@@ -162,7 +162,7 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut Deserializer<'de> {
 
     fn deserialize_str<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
         let length = self.deserialize_length()?;
-        let bytes = self.take_bytes(length)?;
+        let bytes = self.take_bytes(length as usize)?;
         let string = str::from_utf8(bytes)?;
         visitor.visit_borrowed_str(string)
     }
@@ -180,7 +180,7 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut Deserializer<'de> {
 
         let mut buffer = [first_byte; 4];
         let remaining_len = width - 1;
-        let remaining_bytes = self.take_bytes(remaining_len as u32)?;
+        let remaining_bytes = self.take_bytes(remaining_len)?;
         buffer[1..remaining_len].copy_from_slice(remaining_bytes);
 
         let res = str::from_utf8(&buffer[..width])
@@ -197,13 +197,13 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut Deserializer<'de> {
     #[inline]
     fn deserialize_bytes<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
         let length = self.deserialize_length()?;
-        let bytes = self.take_bytes(length)?;
+        let bytes = self.take_bytes(length as usize)?;
         visitor.visit_borrowed_bytes(bytes)
     }
 
     fn deserialize_byte_buf<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
         let length = self.deserialize_length()?;
-        let bytes = self.take_bytes(length)?;
+        let bytes = self.take_bytes(length as usize)?;
         visitor.visit_bytes(bytes)
     }
 
