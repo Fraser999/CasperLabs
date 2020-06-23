@@ -225,6 +225,7 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut Deserializer<'de> {
         visitor.visit_enum(self)
     }
 
+    #[inline]
     fn deserialize_tuple<V: Visitor<'de>>(self, length: usize, visitor: V) -> Result<V::Value> {
         visitor.visit_seq(Access {
             deserializer: self,
@@ -278,6 +279,7 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut Deserializer<'de> {
         Err(Error::Unsupported)
     }
 
+    #[inline]
     fn deserialize_ignored_any<V: Visitor<'de>>(self, _visitor: V) -> Result<V::Value> {
         Err(Error::Unsupported)
     }
@@ -330,6 +332,9 @@ struct Access<'de, 'a> {
 impl<'de, 'a> SeqAccess<'de> for Access<'de, 'a> {
     type Error = Error;
 
+    // Inlining here is crucial because this is called from our crate through serde, thus needs
+    // cross-crate inlining.
+    #[inline]
     fn next_element_seed<T: DeserializeSeed<'de>>(&mut self, seed: T) -> Result<Option<T::Value>> {
         if self.length > 0 {
             self.length -= 1;
