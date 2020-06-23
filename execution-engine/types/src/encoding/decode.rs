@@ -1,6 +1,7 @@
 use alloc::str;
-use core::{mem, u32};
+use core::u32;
 
+use byteorder::{LittleEndian, ReadBytesExt};
 use serde::de::{
     Deserialize, DeserializeSeed, EnumAccess, IntoDeserializer, MapAccess, SeqAccess,
     VariantAccess, Visitor,
@@ -58,11 +59,9 @@ impl<'de> Deserializer<'de> {
     #[inline]
     /// Removes the first 4 bytes from `self.input` and returns them parsed into a `u32`.
     fn deserialize_length(&mut self) -> Result<u32> {
-        const LENGTH: usize = mem::size_of::<u32>();
-        let mut result = [0; LENGTH];
-        let bytes = self.take_bytes(LENGTH)?;
-        result.copy_from_slice(bytes);
-        Ok(<u32>::from_le_bytes(result))
+        self.input
+            .read_u32::<LittleEndian>()
+            .map_err(|_| Error::EndOfSlice)
     }
 }
 
@@ -99,11 +98,11 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut Deserializer<'de> {
 
     #[inline]
     fn deserialize_u16<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
-        const LENGTH: usize = mem::size_of::<u16>();
-        let mut result = [0; LENGTH];
-        let bytes = self.take_bytes(LENGTH)?;
-        result.copy_from_slice(bytes);
-        visitor.visit_u16(<u16>::from_le_bytes(result))
+        visitor.visit_u16(
+            self.input
+                .read_u16::<LittleEndian>()
+                .map_err(|_| Error::EndOfSlice)?,
+        )
     }
 
     #[inline]
@@ -113,43 +112,43 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut Deserializer<'de> {
 
     #[inline]
     fn deserialize_u64<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
-        const LENGTH: usize = mem::size_of::<u64>();
-        let mut result = [0; LENGTH];
-        let bytes = self.take_bytes(LENGTH)?;
-        result.copy_from_slice(bytes);
-        visitor.visit_u64(<u64>::from_le_bytes(result))
+        visitor.visit_u64(
+            self.input
+                .read_u64::<LittleEndian>()
+                .map_err(|_| Error::EndOfSlice)?,
+        )
     }
 
     #[inline]
     fn deserialize_i8<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
-        visitor.visit_i8(self.deserialize_byte()? as i8)
+        visitor.visit_i8(self.input.read_i8().map_err(|_| Error::EndOfSlice)?)
     }
 
     #[inline]
     fn deserialize_i16<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
-        const LENGTH: usize = mem::size_of::<i16>();
-        let mut result = [0; LENGTH];
-        let bytes = self.take_bytes(LENGTH)?;
-        result.copy_from_slice(bytes);
-        visitor.visit_i16(<i16>::from_le_bytes(result))
+        visitor.visit_i16(
+            self.input
+                .read_i16::<LittleEndian>()
+                .map_err(|_| Error::EndOfSlice)?,
+        )
     }
 
     #[inline]
     fn deserialize_i32<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
-        const LENGTH: usize = mem::size_of::<i32>();
-        let mut result = [0; LENGTH];
-        let bytes = self.take_bytes(LENGTH)?;
-        result.copy_from_slice(bytes);
-        visitor.visit_i32(<i32>::from_le_bytes(result))
+        visitor.visit_i32(
+            self.input
+                .read_i32::<LittleEndian>()
+                .map_err(|_| Error::EndOfSlice)?,
+        )
     }
 
     #[inline]
     fn deserialize_i64<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
-        const LENGTH: usize = mem::size_of::<i64>();
-        let mut result = [0; LENGTH];
-        let bytes = self.take_bytes(LENGTH)?;
-        result.copy_from_slice(bytes);
-        visitor.visit_i64(<i64>::from_le_bytes(result))
+        visitor.visit_i64(
+            self.input
+                .read_i64::<LittleEndian>()
+                .map_err(|_| Error::EndOfSlice)?,
+        )
     }
 
     fn deserialize_f32<V: Visitor<'de>>(self, _visitor: V) -> Result<V::Value> {
