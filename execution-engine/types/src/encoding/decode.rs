@@ -14,6 +14,7 @@ pub(super) struct Deserializer<'de> {
 
 impl<'de> Deserializer<'de> {
     /// Creates a new Deserializer that will read from the given slice.
+    #[inline]
     pub(super) fn new(input: &'de [u8]) -> Result<Self> {
         if input.len() > u32::max_value() as usize {
             return Err(Error::SizeLimit);
@@ -30,6 +31,7 @@ impl<'de> Deserializer<'de> {
         }
     }
 
+    #[inline]
     /// Splits off the first `count` bytes from `self.input`.
     fn take_bytes(&mut self, count: u32) -> Result<&'de [u8]> {
         if count as usize > self.input.len() {
@@ -42,6 +44,7 @@ impl<'de> Deserializer<'de> {
     }
 
     /// Removes the first byte from `self.input` and returns it.
+    #[inline]
     fn deserialize_byte(&mut self) -> Result<u8> {
         match self.input.split_first() {
             None => Err(Error::EndOfSlice),
@@ -52,6 +55,7 @@ impl<'de> Deserializer<'de> {
         }
     }
 
+    #[inline]
     /// Removes the first 4 bytes from `self.input` and returns them parsed into a `u32`.
     fn deserialize_length(&mut self) -> Result<u32> {
         const LENGTH: usize = mem::size_of::<u32>();
@@ -190,6 +194,7 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut Deserializer<'de> {
         self.deserialize_str(visitor)
     }
 
+    #[inline]
     fn deserialize_bytes<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
         let length = self.deserialize_length()?;
         let bytes = self.take_bytes(length)?;

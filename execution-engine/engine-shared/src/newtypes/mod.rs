@@ -25,6 +25,7 @@ pub struct Blake2bHash([u8; BLAKE2B_DIGEST_LENGTH]);
 
 impl Blake2bHash {
     /// Creates a 32-byte BLAKE2b hash digest from a given a piece of data
+    #[inline]
     pub fn new(data: &[u8]) -> Self {
         let mut ret = [0u8; BLAKE2B_DIGEST_LENGTH];
         // Safe to unwrap here because our digest length is constant and valid
@@ -35,11 +36,13 @@ impl Blake2bHash {
     }
 
     /// Returns the underlying BLKAE2b hash bytes
+    #[inline]
     pub fn value(&self) -> [u8; BLAKE2B_DIGEST_LENGTH] {
         self.0
     }
 
     /// Converts the underlying BLAKE2b hash digest array to a `Vec`
+    #[inline]
     pub fn to_vec(&self) -> Vec<u8> {
         self.0.to_vec()
     }
@@ -88,6 +91,7 @@ impl From<[u8; BLAKE2B_DIGEST_LENGTH]> for Blake2bHash {
 impl<'a> TryFrom<&'a [u8]> for Blake2bHash {
     type Error = TryFromSliceError;
 
+    #[inline]
     fn try_from(slice: &[u8]) -> Result<Blake2bHash, Self::Error> {
         <[u8; BLAKE2B_DIGEST_LENGTH]>::try_from(slice).map(Blake2bHash)
     }
@@ -100,12 +104,14 @@ impl From<Blake2bHash> for [u8; BLAKE2B_DIGEST_LENGTH] {
 }
 
 impl Serialize for Blake2bHash {
+    #[inline]
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         serializer.serialize_bytes(self.0.as_ref())
     }
 }
 
 impl<'de> Deserialize<'de> for Blake2bHash {
+    #[inline]
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         struct BytesVisitor;
 
@@ -116,6 +122,7 @@ impl<'de> Deserialize<'de> for Blake2bHash {
                 formatter.write_str("a borrowed byte array")
             }
 
+            #[inline]
             fn visit_borrowed_bytes<E: serde::de::Error>(
                 self,
                 bytes: &'de [u8],
