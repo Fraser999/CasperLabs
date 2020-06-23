@@ -200,6 +200,7 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut Deserializer<'de> {
         visitor.visit_borrowed_bytes(bytes)
     }
 
+    #[inline]
     fn deserialize_byte_buf<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
         let length = self.deserialize_length()?;
         let bytes = self.take_bytes(length as usize)?;
@@ -215,11 +216,13 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut Deserializer<'de> {
         }
     }
 
+    #[inline]
     fn deserialize_seq<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
         let length = self.deserialize_length()?;
         self.deserialize_tuple(length as usize, visitor)
     }
 
+    #[inline]
     fn deserialize_enum<V: Visitor<'de>>(
         self,
         _enum: &'static str,
