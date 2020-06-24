@@ -6,7 +6,11 @@ use blake2::{
     VarBlake2b,
 };
 use hex_fmt::HexFmt;
-use serde::{Deserialize, Serialize};
+use serde::{
+    de::{EnumAccess, Error as SerdeError, Unexpected, VariantAccess, Visitor},
+    Deserialize, Deserializer, Serialize, Serializer,
+};
+use serde_bytes::Bytes;
 
 use crate::{account::PublicKey, ContractRef, URef};
 
@@ -32,7 +36,7 @@ fn hash(bytes: &[u8]) -> [u8; BLAKE2B_DIGEST_LENGTH] {
 /// The type under which data (e.g. [`CLValue`](crate::CLValue)s, smart contracts, user accounts)
 /// are indexed on the network.
 #[repr(C)]
-#[derive(PartialEq, Eq, Clone, Copy, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Clone, Copy, PartialOrd, Ord, Hash)]
 pub enum Key {
     /// A `Key` under which a user account is stored.
     Account(PublicKey),
@@ -74,7 +78,7 @@ impl Key {
 
     /// Returns the maximum size a [`Key`] can be serialized into.
     pub const fn max_serialized_length() -> usize {
-        KEY_LOCAL_SEED_LENGTH + BLAKE2B_DIGEST_LENGTH + 1
+        KEY_LOCAL_SEED_LENGTH + KEY_LOCAL_SEED_LENGTH + 9
     }
 
     /// If `self` is of type [`Key::URef`], returns `self` with the [`AccessRights`] stripped from
@@ -188,6 +192,87 @@ impl Default for Key {
     }
 }
 
+impl Serialize for Key {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            Key::Account(public_key) => {
+                serializer.serialize_newtype_variant("key", 0, "account", public_key)
+            }
+            Key::Hash(hash) => {
+                serializer.serialize_newtype_variant("key", 1, "account", Bytes::new(hash.as_ref()))
+            }
+            Key::URef(uref) => serializer.serialize_newtype_variant("key", 2, "uref", uref),
+            Key::Local { seed, hash } => serializer.serialize_newtype_variant(
+                "key",
+                3,
+                "local",
+                &(Bytes::new(seed.as_ref()), Bytes::new(hash.as_ref())),
+            ),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for Key {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct KeyVisitor;
+
+        impl<'de> Visitor<'de> for KeyVisitor {
+            type Value = Key;
+
+            fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
+                formatter.write_str("a serialized Key")
+            }
+
+            fn visit_enum<A: EnumAccess<'de>>(self, value: A) -> Result<Self::Value, A::Error> {
+                let (variant_tag, value): (u8, _) = value.variant()?;
+                match variant_tag {
+                    0 => {
+                        let public_key: PublicKey = value.newtype_variant()?;
+                        Ok(Key::Account(public_key))
+                    }
+                    1 => {
+                        let bytes: &[u8] = value.newtype_variant()?;
+                        if bytes.len() != KEY_HASH_LENGTH {
+                            return Err(SerdeError::invalid_length(bytes.len(), &"32"));
+                        }
+                        let mut array = [0; KEY_HASH_LENGTH];
+                        array.copy_from_slice(bytes);
+                        Ok(Key::Hash(array))
+                    }
+                    2 => {
+                        let uref: URef = value.newtype_variant()?;
+                        Ok(Key::URef(uref))
+                    }
+                    3 => {
+                        let (seed_bytes, hash_bytes): (&[u8], &[u8]) = value.newtype_variant()?;
+
+                        if seed_bytes.len() != KEY_LOCAL_SEED_LENGTH {
+                            return Err(SerdeError::invalid_length(seed_bytes.len(), &"32"));
+                        }
+                        if hash_bytes.len() != KEY_LOCAL_SEED_LENGTH {
+                            return Err(SerdeError::invalid_length(hash_bytes.len(), &"32"));
+                        }
+
+                        let mut seed = [0; KEY_LOCAL_SEED_LENGTH];
+                        seed.copy_from_slice(seed_bytes);
+
+                        let mut hash = [0; KEY_LOCAL_SEED_LENGTH];
+                        hash.copy_from_slice(hash_bytes);
+
+                        Ok(Key::Local { seed, hash })
+                    }
+                    _ => Err(SerdeError::invalid_value(
+                        Unexpected::Unsigned(u64::from(variant_tag)),
+                        &"a u8 in the range 0..4",
+                    )),
+                }
+            }
+        }
+
+        deserializer.deserialize_enum("key", &["account", "hash", "uref", "local"], KeyVisitor)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use alloc::vec::Vec;
@@ -197,6 +282,27 @@ mod tests {
 
     fn test_readable(right: AccessRights, is_true: bool) {
         assert_eq!(right.is_readable(), is_true)
+    }
+
+    #[test]
+    fn serialization_roundtrip() {
+        let addr_array = [255u8; 32];
+        let public_key = PublicKey::ed25519_from(addr_array);
+
+        let account_key = Key::Account(public_key);
+        encoding::test_serialization_roundtrip(&account_key);
+
+        let uref_key = Key::URef(URef::new(addr_array, AccessRights::READ));
+        encoding::test_serialization_roundtrip(&uref_key);
+
+        let hash_key = Key::Hash(addr_array);
+        encoding::test_serialization_roundtrip(&hash_key);
+
+        let local_key = Key::Local {
+            seed: addr_array,
+            hash: addr_array,
+        };
+        encoding::test_serialization_roundtrip(&local_key);
     }
 
     #[test]

@@ -43,6 +43,8 @@ debug = true
 
 [profile.release]
 lto = true
+codegen-units = 1
 
 [profile.bench]
 lto = true
+codegen-units = 1

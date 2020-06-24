@@ -5,7 +5,11 @@ use core::{
 };
 
 use hex_fmt::HexFmt;
-use serde::{Deserialize, Serialize};
+use serde::{
+    de::{Error as SerdeError, SeqAccess, Visitor},
+    ser::SerializeStruct,
+    Deserialize, Deserializer, Serialize, Serializer,
+};
 
 use crate::{AccessRights, ApiError, Key};
 
@@ -13,13 +17,13 @@ use crate::{AccessRights, ApiError, Key};
 pub const UREF_ADDR_LENGTH: usize = 32;
 
 /// The number of bytes in a serialized [`URef`].
-pub const UREF_SERIALIZED_LENGTH: usize = UREF_ADDR_LENGTH + 1;
+pub const UREF_SERIALIZED_LENGTH: usize = UREF_ADDR_LENGTH + 5;
 
 /// Represents an unforgeable reference, containing an address in the network's global storage and
 /// the [`AccessRights`] of the reference.
 ///
 /// A `URef` can be used to index entities such as [`CLValue`](crate::CLValue)s, or smart contracts.
-#[derive(Copy, Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Copy, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct URef([u8; UREF_ADDR_LENGTH], AccessRights);
 
 impl URef {
@@ -121,6 +125,47 @@ impl TryFrom<Key> for URef {
 impl Default for URef {
     fn default() -> Self {
         URef([0; UREF_ADDR_LENGTH], AccessRights::NONE)
+    }
+}
+
+impl Serialize for URef {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut state = serializer.serialize_struct("uref", 2)?;
+        state.serialize_field("addr", serde_bytes::Bytes::new(self.0.as_ref()))?;
+        state.serialize_field("rights", &self.1)?;
+        state.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for URef {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct URefVisitor;
+
+        impl<'de> Visitor<'de> for URefVisitor {
+            type Value = URef;
+
+            fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
+                formatter.write_str("a serialized URef")
+            }
+
+            fn visit_seq<V: SeqAccess<'de>>(self, mut seq: V) -> Result<URef, V::Error> {
+                let bytes: &[u8] = seq
+                    .next_element()?
+                    .ok_or_else(|| SerdeError::invalid_length(0, &self))?;
+                if bytes.len() != UREF_ADDR_LENGTH {
+                    return Err(SerdeError::invalid_length(bytes.len(), &"32"));
+                }
+                let mut addr = [0; UREF_ADDR_LENGTH];
+                addr.copy_from_slice(bytes);
+
+                let rights: AccessRights = seq
+                    .next_element()?
+                    .ok_or_else(|| SerdeError::invalid_length(1, &self))?;
+                Ok(URef(addr, rights))
+            }
+        }
+
+        deserializer.deserialize_struct("uref", &["addr", "rights"], URefVisitor)
     }
 }
 
