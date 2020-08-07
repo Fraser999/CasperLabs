@@ -1,6 +1,7 @@
 use alloc::str;
-use core::{mem, u32};
+use core::u32;
 
+use byteorder::{LittleEndian, ReadBytesExt};
 use serde::de::{
     Deserialize, DeserializeSeed, EnumAccess, IntoDeserializer, MapAccess, SeqAccess,
     VariantAccess, Visitor,
@@ -14,6 +15,7 @@ pub(super) struct Deserializer<'de> {
 
 impl<'de> Deserializer<'de> {
     /// Creates a new Deserializer that will read from the given slice.
+    #[inline]
     pub(super) fn new(input: &'de [u8]) -> Result<Self> {
         if input.len() > u32::max_value() as usize {
             return Err(Error::SizeLimit);
@@ -30,18 +32,20 @@ impl<'de> Deserializer<'de> {
         }
     }
 
+    #[inline]
     /// Splits off the first `count` bytes from `self.input`.
-    fn take_bytes(&mut self, count: u32) -> Result<&'de [u8]> {
-        if count as usize > self.input.len() {
+    fn take_bytes(&mut self, count: usize) -> Result<&'de [u8]> {
+        if count > self.input.len() {
             Err(Error::EndOfSlice)
         } else {
-            let (removed, remainder) = self.input.split_at(count as usize);
+            let (removed, remainder) = self.input.split_at(count);
             self.input = remainder;
             Ok(removed)
         }
     }
 
     /// Removes the first byte from `self.input` and returns it.
+    #[inline]
     fn deserialize_byte(&mut self) -> Result<u8> {
         match self.input.split_first() {
             None => Err(Error::EndOfSlice),
@@ -52,13 +56,12 @@ impl<'de> Deserializer<'de> {
         }
     }
 
+    #[inline]
     /// Removes the first 4 bytes from `self.input` and returns them parsed into a `u32`.
     fn deserialize_length(&mut self) -> Result<u32> {
-        const LENGTH: usize = mem::size_of::<u32>();
-        let mut result = [0; LENGTH];
-        let bytes = self.take_bytes(LENGTH as u32)?;
-        result.copy_from_slice(bytes);
-        Ok(<u32>::from_le_bytes(result))
+        self.input
+            .read_u32::<LittleEndian>()
+            .map_err(|_| Error::EndOfSlice)
     }
 }
 
@@ -95,11 +98,11 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut Deserializer<'de> {
 
     #[inline]
     fn deserialize_u16<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
-        const LENGTH: usize = mem::size_of::<u16>();
-        let mut result = [0; LENGTH];
-        let bytes = self.take_bytes(LENGTH as u32)?;
-        result.copy_from_slice(bytes);
-        visitor.visit_u16(<u16>::from_le_bytes(result))
+        visitor.visit_u16(
+            self.input
+                .read_u16::<LittleEndian>()
+                .map_err(|_| Error::EndOfSlice)?,
+        )
     }
 
     #[inline]
@@ -109,43 +112,43 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut Deserializer<'de> {
 
     #[inline]
     fn deserialize_u64<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
-        const LENGTH: usize = mem::size_of::<u64>();
-        let mut result = [0; LENGTH];
-        let bytes = self.take_bytes(LENGTH as u32)?;
-        result.copy_from_slice(bytes);
-        visitor.visit_u64(<u64>::from_le_bytes(result))
+        visitor.visit_u64(
+            self.input
+                .read_u64::<LittleEndian>()
+                .map_err(|_| Error::EndOfSlice)?,
+        )
     }
 
     #[inline]
     fn deserialize_i8<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
-        visitor.visit_i8(self.deserialize_byte()? as i8)
+        visitor.visit_i8(self.input.read_i8().map_err(|_| Error::EndOfSlice)?)
     }
 
     #[inline]
     fn deserialize_i16<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
-        const LENGTH: usize = mem::size_of::<i16>();
-        let mut result = [0; LENGTH];
-        let bytes = self.take_bytes(LENGTH as u32)?;
-        result.copy_from_slice(bytes);
-        visitor.visit_i16(<i16>::from_le_bytes(result))
+        visitor.visit_i16(
+            self.input
+                .read_i16::<LittleEndian>()
+                .map_err(|_| Error::EndOfSlice)?,
+        )
     }
 
     #[inline]
     fn deserialize_i32<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
-        const LENGTH: usize = mem::size_of::<i32>();
-        let mut result = [0; LENGTH];
-        let bytes = self.take_bytes(LENGTH as u32)?;
-        result.copy_from_slice(bytes);
-        visitor.visit_i32(<i32>::from_le_bytes(result))
+        visitor.visit_i32(
+            self.input
+                .read_i32::<LittleEndian>()
+                .map_err(|_| Error::EndOfSlice)?,
+        )
     }
 
     #[inline]
     fn deserialize_i64<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
-        const LENGTH: usize = mem::size_of::<i64>();
-        let mut result = [0; LENGTH];
-        let bytes = self.take_bytes(LENGTH as u32)?;
-        result.copy_from_slice(bytes);
-        visitor.visit_i64(<i64>::from_le_bytes(result))
+        visitor.visit_i64(
+            self.input
+                .read_i64::<LittleEndian>()
+                .map_err(|_| Error::EndOfSlice)?,
+        )
     }
 
     fn deserialize_f32<V: Visitor<'de>>(self, _visitor: V) -> Result<V::Value> {
@@ -158,7 +161,7 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut Deserializer<'de> {
 
     fn deserialize_str<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
         let length = self.deserialize_length()?;
-        let bytes = self.take_bytes(length)?;
+        let bytes = self.take_bytes(length as usize)?;
         let string = str::from_utf8(bytes)?;
         visitor.visit_borrowed_str(string)
     }
@@ -176,7 +179,7 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut Deserializer<'de> {
 
         let mut buffer = [first_byte; 4];
         let remaining_len = width - 1;
-        let remaining_bytes = self.take_bytes(remaining_len as u32)?;
+        let remaining_bytes = self.take_bytes(remaining_len)?;
         buffer[1..remaining_len].copy_from_slice(remaining_bytes);
 
         let res = str::from_utf8(&buffer[..width])
@@ -186,19 +189,22 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut Deserializer<'de> {
         visitor.visit_char(res)
     }
 
+    #[inline]
     fn deserialize_string<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
         self.deserialize_str(visitor)
     }
 
+    #[inline]
     fn deserialize_bytes<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
         let length = self.deserialize_length()?;
-        let bytes = self.take_bytes(length)?;
+        let bytes = self.take_bytes(length as usize)?;
         visitor.visit_borrowed_bytes(bytes)
     }
 
+    #[inline]
     fn deserialize_byte_buf<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
         let length = self.deserialize_length()?;
-        let bytes = self.take_bytes(length)?;
+        let bytes = self.take_bytes(length as usize)?;
         visitor.visit_bytes(bytes)
     }
 
@@ -211,11 +217,13 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut Deserializer<'de> {
         }
     }
 
+    #[inline]
     fn deserialize_seq<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
         let length = self.deserialize_length()?;
         self.deserialize_tuple(length as usize, visitor)
     }
 
+    #[inline]
     fn deserialize_enum<V: Visitor<'de>>(
         self,
         _enum: &'static str,
@@ -225,6 +233,7 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut Deserializer<'de> {
         visitor.visit_enum(self)
     }
 
+    #[inline]
     fn deserialize_tuple<V: Visitor<'de>>(self, length: usize, visitor: V) -> Result<V::Value> {
         visitor.visit_seq(Access {
             deserializer: self,
@@ -278,6 +287,7 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut Deserializer<'de> {
         Err(Error::Unsupported)
     }
 
+    #[inline]
     fn deserialize_ignored_any<V: Visitor<'de>>(self, _visitor: V) -> Result<V::Value> {
         Err(Error::Unsupported)
     }
@@ -330,6 +340,9 @@ struct Access<'de, 'a> {
 impl<'de, 'a> SeqAccess<'de> for Access<'de, 'a> {
     type Error = Error;
 
+    // Inlining here is crucial because this is called from our crate through serde, thus needs
+    // cross-crate inlining.
+    #[inline]
     fn next_element_seed<T: DeserializeSeed<'de>>(&mut self, seed: T) -> Result<Option<T::Value>> {
         if self.length > 0 {
             self.length -= 1;

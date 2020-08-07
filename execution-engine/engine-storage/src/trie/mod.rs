@@ -178,6 +178,7 @@ impl<'de> Deserialize<'de> for PointerBlock {
                 write!(formatter, "an array of length {}", RADIX)
             }
 
+            #[inline]
             fn visit_seq<A: SeqAccess<'de>>(
                 self,
                 mut seq: A,
